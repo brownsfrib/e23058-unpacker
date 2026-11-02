@@ -1,8 +1,13 @@
-// Multi-detector unpacker: reads a glommed NSCLDAQ .evt file and writes a TTree.
-// Each source ID is routed to its detector class; only FROG is decoded so far.
+// Multi-detector unpacker: reads a glommed NSCLDAQ .evt file and writes one
+// TTree per detector into a single ROOT file. Every tree gets one entry per
+// kept event, so they line up entry-for-entry:
 //
-//   export STAGEAREA=/path/to/stagearea/   RUN=0100   basePath=/path/to/project
-//   . compile.sh unpacker.cxx && ./bin/unpacker
+//   TTree *hira = (TTree*)f->Get("HiRA");
+//   hira->AddFriend("FROG");
+//   hira->Draw("hiraTheta:FROG.frogTheta");
+//
+//   export basePath=...  REGLOM=/path/to/reglom/  RUN=0100
+//   make && ./bin/unpacker
 
 // C++ includes
 #include <iostream>
@@ -19,11 +24,8 @@
 #include "FROG.h"
 #include "Pixie.h"
 #include "HiRA.h"
-
-#define DEFAULT -10000
-#define kMaxFrogHits 512	// 6 boards x 64 channels = 384
-#define kMaxHiraTDC 256		// using a V1190A, 128 channels. this is fine.
-#define kMaxHiraStrips 512	// matches maxlen used in HINP class
+#include "FROGTree.h"
+#include "HiRATree.h"
 
 // ---- source ID -> detector map: the one place to edit -----------------------
 //   FROG  : sid 3  (FROG sub-event builder; inner sids 0-5 are the A5202 boards)
@@ -44,6 +46,7 @@ int main(int argc, char *argv[]){
 	std::string basePath  = requireEnv("basePath");
 	std::string stageArea = requireEnv("REGLOM");
 	std::string runString = requireEnv("RUN");
+	const std::string projectPath = basePath + "/FROG/combined-unpacker";
 
 	std::string runPath = stageArea + "run-" + runString + "-reglom.evt";
 	if (gSystem->AccessPathName(runPath.c_str())){
@@ -52,174 +55,66 @@ int main(int argc, char *argv[]){
 
 	// ---- detectors ----
 	Unpacker unpacker;
-	// ---- Setting FROG unpacker ----
 	FROG  frog;
-	frog.SetHGThreshold(1000);          	// keep if HG >= 1000, any channel
-	frog.SetHGThreshold(2, 46, 900);    	// per channel
-	if (!frog.geometry.Load(basePath + "/FROG/combined-unpacker/input/FROG_channel_theta_phi.dat")){
-		std::string msg = "\033[1;31mERROR: Could not load FROG_channel_theta_phi.dat input file\033[0m\n";
-		throw std::runtime_error(msg);
-	}
-	frog.zeroSuppress = false;
-	// ---- Setting FROG unpacker ----
-
-	// -------------------------------
-
-	// ---- Setting HiRA unpacker ----
+	Pixie pixie;				// not built yet
 	HiRA  hira;
-	if (!hira.geometry.Load(basePath + "/FROG/combined-unapcker/input/Hira_channel_theta_phi.dat")){
-		std::string msg = "\033[1;31mERROR: Could not load Hira_channel_theta_phi.dat input file\033[0m\n";
-		throw std::runtime_error(msg);
-	}
-	// ---- Setting HiRA unpacker ----
 
-	Pixie pixie; 				// not built yet
+	frog.SetHGThreshold(1000);		// keep if HG >= 1000, any channel
+	frog.SetHGThreshold(2, 46, 900);	// per channel
+	frog.zeroSuppress = false;
+
+	if (!frog.geometry.Load(projectPath + "/input/FROG_channel_theta_phi.dat")){
+		return 1;
+	}
+	if (!hira.geometry.Load(projectPath + "/input/HiRA_channel_theta_phi.dat")){
+		return 1;
+	}
+	// hira.tdcMap.Load(projectPath + "/input/HiRA_tdc_map.csv");	// format TBD
 
 	unpacker.Register(3, &frog);
-	unpacker.Register(7, &hira);		
-	//unpacker.Register(6, &pixie);		// uncomment once Pixie::Unpack is written
+	// unpacker.Register(6, &pixie);	// uncomment once Pixie::Unpack is written
+	unpacker.Register(7, &hira);
 
 	if (!unpacker.Open(runPath)){
 		return 1;
 	}
 
-	// ---- output tree ----
-	const std::string outputPath = basePath + "/FROG/combined-unpacker/output/run_" + runString + ".root";
+	// ---- output: one file, one tree per detector ----
+	const std::string outputPath = projectPath + "/output/run_" + runString + ".root";
 	TFile *outputFile = TFile::Open(outputPath.c_str(), "RECREATE");
-	TTree tree("FROG", "FROG glommed events");
 
-	// ---- FROG information ----
-	ULong64_t timestamp;
-	Int_t     frogMult;
-	Int_t 	  frogNBoards;
-	Int_t     frogBoard[kMaxFrogHits];
-	Int_t     frogChannel[kMaxFrogHits];
-	Double_t  frogLG[kMaxFrogHits];
-	Double_t  frogHG[kMaxFrogHits];
-	Double_t  frogToA[kMaxFrogHits];
-	Double_t  frogToT[kMaxFrogHits];
-
-	// Angular information
-	Double_t frogTheta[kMaxFrogHits];
-	Double_t frogDTheta[kMaxFrogHits];
-	Double_t frogPhi[kMaxFrogHits];
-	Double_t frogDPhi[kMaxFrogHits];
-
-
-	tree.Branch("timestamp",   	 &timestamp,  		"timestamp/l");
-	tree.Branch("frogMult",    	 &frogMult,   		"frogMult/I");
-	tree.Branch("frogNBoards", 	 &frogNBoards,		"frogNBoards/I");
-	tree.Branch("frogBoard",   	 frogBoard,   		"frogBoard[frogMult]/I");
-	tree.Branch("frogChannel", 	 frogChannel, 		"frogChannel[frogMult]/I");
-	tree.Branch("frogLG",      	 frogLG,      		"frogLG[frogMult]/D");
-	tree.Branch("frogHG",      	 frogHG,      		"frogHG[frogMult]/D");
-	tree.Branch("frogToA",     	 frogToA,     		"frogToA[frogMult]/D");	// DEFAULT if absent
-	tree.Branch("frogToT",     	 frogToT,     		"frogToT[frogMult]/D");	// DEFAULT if absent
-	tree.Branch("frogTheta",	 frogTheta,	 	"frogTheta[frogMult]/D");
-	tree.Branch("frogDTheta",	 frogDTheta,	 	"frogDTheta[frogMult]/D");
-	tree.Branch("frogPhi",	 	 frogPhi,	 	"frogPhi[frogMult]/D");
-	tree.Branch("frogDPhi",	 	 frogDPhi,	 	"frogDPhi[frogMult]/D");
-	// ---- FROG information ----
-
-
-	// ---- HiRA information ----
-	Int_t     hiraNStrips;
-	Int_t     hiraMB[kMaxHiraStrips];
-	Int_t     hiraBoard[kMaxHiraStrips];
-	Int_t     hiraStrip[kMaxHiraStrips];
-	Double_t  hiraHG[kMaxHiraStrips];
-	Double_t  hiraLG[kMaxHiraStrips];
-	Double_t  hiraTime[kMaxHiraStrips];
-	Double_t  hiraADC1[V785::kChannels];
-	Double_t  hiraADC2[V785::kChannels];
-	Int_t     hiraTDCMult;
-	Int_t     hiraTDCChannel[kMaxHiraTDC];
-	Double_t  hiraTDCTime[kMaxHiraTDC];
-
-	// HiRA angular information goes here
-
-	tree.Branch("hiraNStrips",    &hiraNStrips,   "hiraNStrips/I");
-	tree.Branch("hiraMB",         hiraMB,         "hiraMB[hiraNStrips]/I");
-	tree.Branch("hiraBoard",      hiraBoard,      "hiraBoard[hiraNStrips]/I");
-	tree.Branch("hiraStrip",      hiraStrip,      "hiraStrip[hiraNStrips]/I");
-	tree.Branch("hiraHG",         hiraHG,         "hiraHG[hiraNStrips]/D");
-	tree.Branch("hiraLG",         hiraLG,         "hiraLG[hiraNStrips]/D");
-	tree.Branch("hiraTime",       hiraTime,       "hiraTime[hiraNStrips]/D");
-	tree.Branch("hiraADC1",       hiraADC1,       "hiraADC1[32]/D");	// DEFAULT if absent
-	tree.Branch("hiraADC2",       hiraADC2,       "hiraADC2[32]/D");
-	tree.Branch("hiraTDCMult",    &hiraTDCMult,   "hiraTDCMult/I");
-	tree.Branch("hiraTDCChannel", hiraTDCChannel, "hiraTDCChannel[hiraTDCMult]/I");
-	tree.Branch("hiraTDCTime",    hiraTDCTime,    "hiraTDCTime[hiraTDCMult]/D");
-	// ---- HiRA information ----
-
-
-	// ---- Pixie information ----
-	// ----  not written yet  ----
-	// ---- Pixie information ----
-
+	FROGTree frogTree(frog);		// tree "FROG"
+	HiRATree hiraTree(hira);		// tree "HiRA"
+	frogTree.totCut = 10;			// FROG channels need ToT >= 10 (< 0: no cut)
 
 	// ---- event loop ----
-	long written = 0;
+	Long64_t written = 0;
 	while (unpacker.NextEvent()){
 		if ((unpacker.physicsEvents % 30000) == 0){
 			std::cout << '\r' << unpacker.physicsEvents << std::flush;
 		}
-
 		if (frog.sawHeader){
-			continue;	// A5202 run header: no hits (see summary)
-		}
-		// drop events with no detector we decode yet
-
-		timestamp = unpacker.eventTimestamp;
-
-		// ---- FROG writing ---- 
-		frogNBoards = (Int_t)frog.boards.size();    // new
-		frogMult = 0;
-		for (size_t i = 0; i < frog.hits.size() && frogMult < kMaxFrogHits; i++){
-			const FrogHit &h = frog.hits[i];
-			if ((!h.has_tot) || (h.tot <= 5)){
-				continue;
-			}
-			frogBoard[frogMult]   = h.board;
-			frogChannel[frogMult] = h.channel;
-			frogLG[frogMult]      = h.has_lg  ? h.lg  : DEFAULT;
-			frogHG[frogMult]      = h.has_hg  ? h.hg  : DEFAULT;
-			frogToA[frogMult]     = h.has_toa ? h.toa : DEFAULT;
-			frogToT[frogMult]     = h.has_tot ? h.tot : DEFAULT;
-
-			// angular information
-			frogTheta[frogMult] 	= h.has_angles ? h.theta : DEFAULT;
-			frogDTheta[frogMult] 	= h.has_angles ? h.dtheta : DEFAULT;
-			frogPhi[frogMult] 	= h.has_angles ? h.phi : DEFAULT;
-			frogDPhi[frogMult] 	= h.has_angles ? h.dphi : DEFAULT;
-
-			frogMult++;
-		}
-		// ---- FROG writing ---- 
-
-		// ---- HiRA writing ---- 
-		hiraNStrips = 0;
-		hiraTDCMult = 0;
-		for (int ch=0; ch < V785::kChannels; ch++){
-			hiraADC1[ch] = hira.adc1.has[ch] ? hira.adc1.value[ch] : DEFAULT;
-			hiraADC2[ch] = hira.adc2.has[ch] ? hira.adc2.value[ch] : DEFAULT;
+			continue;			// A5202 run header: no hits (see summary)
 		}
 
-		// ---- HiRA writing ---- 
-		if ((frogMult == 0) && (!hira.fired)){
-			continue;
+		bool frogHas = frogTree.Build();
+		bool hiraHas = hiraTree.Build();
+		if (!frogHas && !hiraHas){
+			continue;			// nothing from any detector
 		}
 
-		tree.Fill();
+		// fill EVERY tree for every kept event, so entries stay aligned
+		frogTree.Fill(written, unpacker.eventTimestamp);
+		hiraTree.Fill(written, unpacker.eventTimestamp);
 		written++;
 	}
 
 	unpacker.PrintSummary();
 
-	outputFile->cd();
-	tree.Write();
+	outputFile->Write();
 	outputFile->Close();
-	std::cout << "\033[1;35mWrote " << written << " events to " << outputPath << "\033[0m\n";
+	std::cout << "\033[1;35mWrote " << written << " events (trees FROG, HiRA) to "
+	          << outputPath << "\033[0m\n";
 
 	return 0;
 }
