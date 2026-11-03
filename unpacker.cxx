@@ -69,6 +69,9 @@ int main(int argc, char *argv[]){
 	if (!hira.geometry.Load(projectPath + "/input/HiRA_channel_theta_phi.dat")){
 		return 1;
 	}
+	if (!hira.geometry.LoadCsI(projectPath + "/input/HiRA_csi.csv")){
+		return 1;
+	}
 	// hira.tdcMap.Load(projectPath + "/input/HiRA_tdc_map.csv");	// format TBD
 
 	unpacker.Register(3, &frog);
