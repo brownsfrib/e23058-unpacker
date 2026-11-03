@@ -1,5 +1,69 @@
 # We can just keep this as a text file, it doesn't make sense to have it be a binary or something else
 # Not big enough and very important that we keep this accurate/straight
+# diamond_anode == DB3 Anode (log book)
 Channel, Variable
-0,
+0,  master_trigger
+1,  diamond_det_strip_0
+2,  diamond_det_strip_1
+3,  diamond_det_strip_2
+4,  diamond_det_strip_3
+5,  diamond_det_strip_4
+6,  beam_rf
+7,  diamond_anode
+8,  upstream_scintillator_cfd
+9,  frog_or_or
+10, frog_maj
+11, frog_trigger
+12, time_reset
+13, 
+14,
+15,
+16, csi_0
+17, csi_1
+18, csi_2
+19, csi_3
+20, csi_4
+21, csi_5
+22, csi_6
+23, csi_7
+24, csi_8
+25, csi_9
+26, csi_10
+27, csi_11
+28, csi_12
+29, csi_13
+30, csi_14
+31, csi_15
+32, csi_16
+33, csi_17
+34, csi_18
+35, csi_19
+36, csi_20
+37, csi_21
+38, csi_22
+39, csi_23
+40, csi_24
+41, csi_25
+42, csi_26
+43, csi_27
+44, csi_28
+45, csi_29
+46, csi_30
+47, csi_31
+48, csi_32
+49, csi_33  
+50, csi_34
+51, csi_35
+52, csi_36
+53, csi_37
+54, csi_38
+55, csi_39
+56, csi_40
+57, csi_41
+58, csi_42
+59, csi_43
+60, csi_44
+61, csi_45
+62, csi_46
+63, csi_47
 

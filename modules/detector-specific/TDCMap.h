@@ -1,5 +1,5 @@
-#ifndef HIRATDCMAP_H
-#define HIRATDCMAP_H
+#ifndef TDCMAP_H
+#define TDCMAP_H
 
 // C/C++ includes
 #include <iostream>
@@ -9,7 +9,7 @@
 // What one TDC channel means
 struct TDCMapEntry {
 	bool        valid            = false;	// false: channel not mapped
-	std::string name;				// variable name, e.g. "CsI_3"
+	std::string name;			// variable name, e.g. "CsI_3"
 	int         referenceChannel = -1;	// -1: no reference subtraction
 };
 
@@ -19,13 +19,13 @@ struct TDCMapEntry {
  * Load() is a placeholder until the file format (CSV / binary) is decided.
  * Set() fills entries by hand in the meantime.
  */
-class HiRATDCMap{
+class TDCMap{
 	public:
 		static const int kChannels = 128;
 
 		bool Load(const std::string &path){
 			// TODO: read the mapping file once its format is fixed
-			std::cerr << "\033[1;33mHiRATDCMap::Load(" << path
+			std::cerr << "\033[1;33mTDCMap::Load(" << path
 			          << "): not implemented yet - no TDC mapping loaded\033[0m\n";
 			return false;
 		}
@@ -52,4 +52,4 @@ class HiRATDCMap{
 		TDCMapEntry fNone;
 };
 
-#endif // HIRATDCMAP_H
+#endif // TDCMAP_H

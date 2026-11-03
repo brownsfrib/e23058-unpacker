@@ -12,7 +12,7 @@
 #include "HINP.h"
 #include "V785.h"
 #include "V1190.h"
-#include "HiRATDCMap.h"
+#include "TDCMap.h"
 #include "HiRAGeometry.h"
 
 /**
@@ -56,7 +56,7 @@ class HiRA : public Detector{
 		V1190 tdc;
 
 		// run level
-		HiRATDCMap tdcMap;
+		TDCMap tdcMap;
 		HiRAGeometry geometry;
 
 	private:

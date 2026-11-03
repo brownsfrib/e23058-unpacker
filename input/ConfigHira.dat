@@ -1,0 +1,35 @@
+% MOCK ConfigHira.dat for the e23058 unpacker - placeholder values for integration.
+% Same token format as the NPTool ConfigHira.dat. Telescope numbers are P0-P11.
+% Energies in MeV (after HiRA_strip_calibration.txt), raw values in ADC channels.
+ConfigHira
+
+% --- front/back strip pairing (calibrated energies)
+STRIP_ENERGY_MATCHING_SIGMA              0.020
+STRIP_ENERGY_MATCHING_NUMBER_OF_SIGMA    5
+MAX_STRIP_MULTIPLICITY                   8
+
+% --- neighbouring-pixel recombination (distance in strip units; sqrt(2) = 3x3 block)
+NEIGHBOUR_DISTANCE                       1.41422
+
+% --- Si -> CsI matching: crystal centres in (EF, EB) strip units, box = CSI_SIZE wide.
+% Numbering follows the hardware/figure: 0 top-left, 1 bottom-left, 2 bottom-right, 3 top-right
+% (EF low = left, EB high = top). Centres on x.5 so the four boxes tile 0-31 with no gap/overlap.
+CSI_SIZE                                 16
+CSI_CENTRE  0   7.5  23.5
+CSI_CENTRE  1   7.5   7.5
+CSI_CENTRE  2  23.5   7.5
+CSI_CENTRE  3  23.5  23.5
+IGNORE_NOT_MATCHING_CSI
+
+% --- thresholds
+HG_SATURATION                            7900
+SI_EF_E_RAW_THRESHOLD                    150
+SI_EB_E_RAW_THRESHOLD                    150
+SI_EF_E_THRESHOLD                        0.5
+SI_EB_E_THRESHOLD                        0.5
+CSI_E_RAW_THRESHOLD                      150
+
+% --- dead / noisy channels: TELE<n>STREF<strip>, TELE<n>STREB<strip>, TELE<n>CSI<crystal>
+DISABLE_CHANNEL  TELE4STREF13
+DISABLE_CHANNEL  TELE10CSI2
+% DISABLE_ALL    TELE4      % P4 shows bias U = NA on the layout - enable if it was off
