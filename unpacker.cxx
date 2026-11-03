@@ -23,9 +23,14 @@
 #include "Unpacker.h"
 #include "FROG.h"
 #include "Pixie.h"
-#include "HiRA.h"
 #include "FROGTree.h"
+
+#include "HiRA.h"
 #include "HiRATree.h"
+#include "HiRAConfig.h"
+#include "HiRACalibration.h"
+#include "HiRAGeometry.h"
+#include "HiRAPhysics.h"
 
 // ---- source ID -> detector map: the one place to edit -----------------------
 //   FROG  : sid 3  (FROG sub-event builder; inner sids 0-5 are the A5202 boards)
@@ -66,12 +71,26 @@ int main(int argc, char *argv[]){
 	if (!frog.geometry.Load(projectPath + "/input/FROG_channel_theta_phi.dat")){
 		return 1;
 	}
+
+	HiRAConfig hiraCfg;
+	hiraCfg.Load(projectPath + "/input/ConfigHira.dat");
+	HiRACalibration hiraCal;
+	hiraCal.Load(projectPath + "/input/HiRA_strip_calibration.txt");
 	if (!hira.geometry.Load(projectPath + "/input/HiRA_channel_theta_phi.dat")){
 		return 1;
 	}
 	if (!hira.geometry.LoadCsI(projectPath + "/input/HiRA_csi.csv")){
 		return 1;
 	}
+	if (!hira.geometry.LoadPixels(projectPath + "/input/HiRA_pixels.csv")){
+		return 1;
+	}
+	HiRAPhysics hiraPhysics(hira.geometry, hiraCfg, hiraCal);
+	hiraPhysics.Build(hira);
+
+
+
+
 	// hira.tdcMap.Load(projectPath + "/input/HiRA_tdc_map.csv");	// format TBD
 
 	unpacker.Register(3, &frog);
