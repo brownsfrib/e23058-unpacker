@@ -18,7 +18,7 @@ ROOTCFLAGS := $(shell root-config --cflags)
 ROOTLIBS   := $(shell root-config --glibs)
 
 INCDIRS  := include modules/include modules/detector-specific
-SRCDIRS  := src modules/src
+SRCDIRS  := src modules/src modules/detector-specific/src
 
 CXXFLAGS := -O2 -Wall $(ROOTCFLAGS)
 CPPFLAGS := $(addprefix -I,$(INCDIRS))

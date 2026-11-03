@@ -75,7 +75,7 @@ int main(int argc, char *argv[]){
 	HiRAConfig hiraCfg;
 	hiraCfg.Load(projectPath + "/input/ConfigHira.dat");
 	HiRACalibration hiraCal;
-	hiraCal.Load(projectPath + "/input/HiRA_strip_calibration.txt");
+	hiraCal.Load(projectPath + "/input/hira-calibration/HiRA_strip_calibration.txt");
 	if (!hira.geometry.Load(projectPath + "/input/HiRA_channel_theta_phi.dat")){
 		return 1;
 	}
@@ -86,7 +86,6 @@ int main(int argc, char *argv[]){
 		return 1;
 	}
 	HiRAPhysics hiraPhysics(hira.geometry, hiraCfg, hiraCal);
-	hiraPhysics.Build(hira);
 
 
 
@@ -119,6 +118,7 @@ int main(int argc, char *argv[]){
 			continue;			// A5202 run header: no hits (see summary)
 		}
 
+		hiraPhysics.Build(hira);
 		bool frogHas = frogTree.Build();
 		bool hiraHas = hiraTree.Build();
 		if (!frogHas && !hiraHas){
