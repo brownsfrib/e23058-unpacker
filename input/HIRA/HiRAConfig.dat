@@ -1,0 +1,29 @@
+% HiRAConfig.dat - read by bin/unpacker (paths relative to the project directory)
+% Format: [section], then KEY values...   (% or # = comment; repeatable keys allowed)
+% Telescopes are P0-P11. Energies in MeV (calibrated), raw values in ADC channels.
+
+[geometry]
+STRIP_TABLE   input/HIRA/HiRA_channel_theta_phi.dat	% from tools/toBinary_HIRA
+CSI_TABLE     input/HIRA/geometry/HiRA_csi.csv		% from build_hira_geometry.py
+PIXEL_TABLE   input/HIRA/geometry/HiRA_pixels.csv		% from build_hira_geometry.py
+TDC_MAPPING   input/TDC/TDCMapping.csv			% V1190 channel -> TDC. member
+
+[calibration]
+STRIP_CALIBRATION  input/HIRA/calibration/HiRA_strip_calibration.txt	% MOCK
+HG_SATURATION      7900		% raw HG at/above this -> LG calibration
+
+[physics]
+SI_EF_E_RAW_THRESHOLD                  150
+SI_EB_E_RAW_THRESHOLD                  150
+SI_EF_E_THRESHOLD                      0.5
+SI_EB_E_THRESHOLD                      0.5
+CSI_E_RAW_THRESHOLD                    150
+% front/back pairing: |E_EF - E_EB|/2 < N_SIGMA * SIGMA (MeV)
+STRIP_ENERGY_MATCHING_SIGMA            1.0
+STRIP_ENERGY_MATCHING_NUMBER_OF_SIGMA  5
+MAX_STRIP_MULTIPLICITY                 8
+MAX_TRACKS_PER_TELESCOPE               4
+% dead / noisy channels: TELE<n>STREF<strip>, TELE<n>STREB<strip>, TELE<n>CSI<crystal 0-3>
+DISABLE_CHANNEL  TELE4STREF13
+DISABLE_CHANNEL  TELE10CSI2
+% DISABLE_ALL    TELE4

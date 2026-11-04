@@ -1,143 +1,132 @@
-// Multi-detector unpacker: reads a glommed NSCLDAQ .evt file and writes one
-// TTree per detector into a single ROOT file. Every tree gets one entry per
-// kept event, so they line up entry-for-entry:
+// E23058 unpacker: glommed NSCLDAQ .evt -> output/run_<RUN>.root, tree "E23058"
+// with branches FROG., HIRA., TDC. (one entry per kept event).
 //
-//   TTree *hira = (TTree*)f->Get("HiRA");
-//   hira->AddFriend("FROG");
-//   hira->Draw("hiraTheta:FROG.frogTheta");
+//   export REGLOM=/path/to/reglom/  RUN=0100
+//   ./bin/unpacker            (run from the project directory)
 //
-//   export basePath=...  REGLOM=/path/to/reglom/  RUN=0100
-//   make && ./bin/unpacker
+// Per detector:  reader -> Data -> Geometry -> [Calibration] -> Physics -> TreeWriter
+// Settings live in input/FROG/FROGConfig.dat and input/HIRA/HiRAConfig.dat.
 
 // C++ includes
 #include <iostream>
 #include <string>
-#include <stdexcept>
 
 // ROOT includes
-#include "TFile.h"
-#include "TTree.h"
 #include "TSystem.h"
 
 // Unpacker includes
+#include "Config.h"
+#include "TreeWriter.h"
 #include "Unpacker.h"
+
 #include "FROG.h"
-#include "Pixie.h"
-#include "FROGTree.h"
+#include "FROGData.h"
+#include "FROGGeometry.h"
+#include "FROGPhysics.h"
 
 #include "HiRA.h"
-#include "HiRATree.h"
-#include "HiRAConfig.h"
-#include "HiRACalibration.h"
+#include "HiRAData.h"
 #include "HiRAGeometry.h"
+#include "HiRACalibration.h"
 #include "HiRAPhysics.h"
 
-// ---- source ID -> detector map: the one place to edit -----------------------
-//   FROG  : sid 3  (FROG sub-event builder; inner sids 0-5 are the A5202 boards)
-//   Pixie : sid 6
-//   HiRA  : sid 7
-// -----------------------------------------------------------------------------
+#include "TDCData.h"
+#include "TDCMapping.h"
 
-std::string requireEnv(const char *name){
+// ---- source IDs: FROG 3 (inner sids 0-5 = A5202 boards), Pixie 6, HiRA 7
+
+static std::string requireEnv(const char *name){
 	const char *v = gSystem->Getenv(name);
 	if (v == nullptr){
-		throw std::runtime_error(std::string("\033[1;31mEnvironment variable ") + name + " not set.\033[0m\n");
+		std::cerr << "\033[1;31mEnvironment variable " << name << " not set.\033[0m\n";
+		exit(1);
 	}
-	return std::string(v);
+	return v;
 }
 
-int main(int argc, char *argv[]){
+int main(){
+	const std::string run     = requireEnv("RUN");
+	const std::string runPath = requireEnv("REGLOM") + "/run-" + run + "-reglom.evt";
 
-	std::string basePath  = requireEnv("basePath");
-	std::string stageArea = requireEnv("REGLOM");
-	std::string runString = requireEnv("RUN");
-	const std::string projectPath = basePath + "/combined-unpacker";
-
-	std::string runPath = stageArea + "run-" + runString + "-reglom.evt";
-	if (gSystem->AccessPathName(runPath.c_str())){
-		throw std::runtime_error("\033[1;31mFile " + runPath + " does not exist.\033[0m\n");
-	}
-
-	// ---- detectors ----
-	Unpacker unpacker;
-	FROG  frog;
-	Pixie pixie;				// not built yet
-	HiRA  hira;
-
-	frog.SetHGThreshold(1000);		// keep if HG >= 1000, any channel
-	frog.SetHGThreshold(2, 46, 900);	// per channel
-	frog.zeroSuppress = false;
-
-	if (!frog.geometry.Load(projectPath + "/input/FROG_channel_theta_phi.dat")){
+	// ---- configuration
+	Config frogCfg, hiraCfg;
+	if (!frogCfg.Load("input/FROG/FROGConfig.dat") || !hiraCfg.Load("input/HIRA/HiRAConfig.dat")){
+		std::cerr << "\033[1;31mRun ./bin/unpacker from the project directory.\033[0m\n";
 		return 1;
 	}
 
-	HiRAConfig hiraCfg;
-	hiraCfg.Load(projectPath + "/input/ConfigHira.dat");
+	// ---- FROG
+	FROGData     frogData;
+	FROG         frog(&frogData);
+	FROGGeometry frogGeo;
+	FROGPhysics  frogPhys;
+	if (!frogGeo.Load(frogCfg) || !frogPhys.Load(frogCfg)){
+		return 1;
+	}
+
+	// ---- HiRA (+ the auxiliary TDC channels in the same stack)
+	HiRAData        hiraData;
+	HiRA            hira;
+	HiRAGeometry    hiraGeo;
 	HiRACalibration hiraCal;
-	hiraCal.Load(projectPath + "/input/hira-calibration/HiRA_strip_calibration.txt");
-	if (!hira.geometry.Load(projectPath + "/input/HiRA_channel_theta_phi.dat")){
+	HiRAPhysics     hiraPhys(hiraGeo);
+	TDCData         tdcData;
+	TDCMapping      tdcMap;
+	if (!hiraGeo.Load(hiraCfg) || !hiraCal.Load(hiraCfg) || !hiraPhys.Load(hiraCfg) ||
+	    !tdcMap.Load(hiraCfg.GetString("geometry", "TDC_MAPPING"))){
 		return 1;
 	}
-	if (!hira.geometry.LoadCsI(projectPath + "/input/HiRA_csi.csv")){
-		return 1;
-	}
-	if (!hira.geometry.LoadPixels(projectPath + "/input/HiRA_pixels.csv")){
-		return 1;
-	}
-	HiRAPhysics hiraPhysics(hira.geometry, hiraCfg, hiraCal);
+	frogCfg.ReportUnused();
+	hiraCfg.ReportUnused();
 
-
-
-
-	// hira.tdcMap.Load(projectPath + "/input/HiRA_tdc_map.csv");	// format TBD
-
+	// ---- input / output
+	Unpacker unpacker;
 	unpacker.Register(3, &frog);
-	// unpacker.Register(6, &pixie);	// uncomment once Pixie::Unpack is written
 	unpacker.Register(7, &hira);
-
+	// unpacker.Register(6, &pixie);	// once Pixie is written
 	if (!unpacker.Open(runPath)){
 		return 1;
 	}
+	gSystem->mkdir("output", true);
+	TreeWriter writer("output/run_" + run + ".root");
+	if (!writer.IsOpen()){
+		return 1;
+	}
+	writer.Add("FROG.", &frogData);
+	writer.Add("HIRA.", &hiraData);
+	writer.Add("TDC.",  &tdcData);
 
-	// ---- output: one file, one tree per detector ----
-	const std::string outputPath = projectPath + "/output/run_" + runString + ".root";
-	TFile *outputFile = TFile::Open(outputPath.c_str(), "RECREATE");
-
-	FROGTree frogTree(frog);		// tree "FROG"
-	HiRATree hiraTree(hira, &hiraPhysics);	// tree "HiRA"
-	frogTree.totCut = 10;			// FROG channels need ToT >= 10 (< 0: no cut)
-
-	// ---- event loop ----
-	Long64_t written = 0;
+	// ---- event loop
 	while (unpacker.NextEvent()){
 		if ((unpacker.physicsEvents % 30000) == 0){
 			std::cout << '\r' << unpacker.physicsEvents << std::flush;
 		}
 		if (frog.sawHeader){
-			continue;			// A5202 run header: no hits (see summary)
+			continue;			// A5202 run header: no hits
 		}
 
-		hiraPhysics.Build(hira);
-		bool frogHas = frogTree.Build();
-		bool hiraHas = hiraTree.Build();
-		if (!frogHas && !hiraHas){
-			continue;			// nothing from any detector
-		}
+		frogGeo.Apply(frogData);
+		frogPhys.Apply(frogData);
 
-		// fill EVERY tree for every kept event, so entries stay aligned
-		frogTree.Fill(written, unpacker.eventTimestamp);
-		hiraTree.Fill(written, unpacker.eventTimestamp);
-		written++;
+		hiraGeo.Map(hira, hiraData);
+		hiraCal.Apply(hiraData);
+		hiraPhys.Apply(hiraData);
+		tdcMap.Fill(hira.tdc, tdcData);
+
+		if (frogData.fNPass == 0 && !hira.fired){
+			continue;			// nothing worth writing
+		}
+		writer.Fill(unpacker.eventTimestamp);
 	}
+	std::cout << "\n";
 
-	hiraPhysics.PrintSummary();
-	unpacker.PrintSummary();
+	hiraGeo.PrintSummary();
+	hiraPhys.PrintSummary();
+	unpacker.PrintSummary();		// includes FROG / HiRA reader summaries
 
-	outputFile->Write();
-	outputFile->Close();
-	std::cout << "\033[1;35mWrote " << written << " events (trees FROG, HiRA) to "
-	          << outputPath << "\033[0m\n";
-
+	Long64_t n = writer.Entries();
+	writer.Close();
+	std::cout << "\033[1;35mWrote " << n << " events (tree E23058: FROG. HIRA. TDC.) to output/run_"
+	          << run << ".root\033[0m\n";
 	return 0;
 }

@@ -1,40 +1,15 @@
 #include "FROG.h"
 
-FROG::FROG() : Detector("FROG") {}
+#include <iostream>
+
+static const double kNone = -10000;
+
+FROG::FROG(FROGData *data) : Detector("FROG"), fData(data) {}
 FROG::~FROG() {}
 
 void FROG::Clear(){
-	hits.clear();
-	boards.clear();
+	fData->Clear();
 	sawHeader = false;
-}
-
-void FROG::SetHGThreshold(uint16_t thr){
-	for (int b = 0; b < kBoards; b++)
-		for (int c = 0; c < kChannels; c++)
-			fHGThr[b][c] = thr;
-}
-
-void FROG::SetHGThreshold(int board, int channel, uint16_t thr){
-	if (board >= 0 && board < kBoards && channel >= 0 && channel < kChannels)
-		fHGThr[board][channel] = thr;
-}
-
-// did this channel get data?
-bool FROG::Keep(const FrogHit &hit) const{
-	if (!zeroSuppress){
-		return true;
-	}
-	if ((hit.has_toa) || (hit.has_tot)){
-		return true;
-	}
-	if (hit.channel < kChannels){
-		uint16_t thr = fHGThr[hit.board][hit.channel];
-		if ((thr > 0) && (hit.has_hg) && (hit.hg >= thr)){
-			return true;
-		}
-	}
-	return false;
 }
 
 bool FROG::Unpack(const Ring::Fragment &frag){
@@ -42,42 +17,25 @@ bool FROG::Unpack(const Ring::Fragment &frag){
 	if (Ring::SplitFragments(frag.payload, frag.payloadBytes, fInner)){
 		bool ok = false;
 		for (size_t i = 0; i < fInner.size(); i++){
-			if (fInner[i].ringType != Ring::PHYSICS_EVENT){
-				continue;
+			if (fInner[i].ringType == Ring::PHYSICS_EVENT){
+				ok |= UnpackBoard(fInner[i]);
 			}
-			ok |= UnpackBoard(fInner[i]);
 		}
 		return ok;
 	}
-	// not nested: the fragment is one board
-	return UnpackBoard(frag);
-}
-
-// Using FROGGeometry.h to get angular information from alignment/CAD calibrations
-static void SetAngles(FrogHit &hit, const FROGGeometry &geo){
-	const FrogAngles &angles 	= geo.Get(hit.board, hit.channel);
-	hit.has_angles 			= angles.valid;
-	hit.theta			= angles.theta;
-	hit.dtheta			= angles.dtheta;
-	hit.phi				= angles.phi;
-	hit.dphi			= angles.dphi;
+	return UnpackBoard(frag);		// not nested: the fragment is one board
 }
 
 bool FROG::UnpackBoard(const Ring::Fragment &f){
 	fBoardFrags++;
-
-	// sanity: A5202 inclusive size (and, for data, inner size) must fit
 	if (f.payloadBytes < 4 || Ring::peek<uint16_t>(f.payload) > f.payloadBytes){
 		fBadFrags++;
 		return false;
 	}
-
 	// A5202 reads through memcpy, so the cast is safe for any alignment
-	unsigned short *p = const_cast<unsigned short*>(
-		reinterpret_cast<const unsigned short*>(f.payload));
+	unsigned short *p = const_cast<unsigned short*>(reinterpret_cast<const unsigned short*>(f.payload));
 
 	bool stat = fA5202.Unpack(p);
-
 	if (fA5202.looksLikeHeader){
 		fA5202.UnpackFileHeader(p);
 		headers[f.sourceID] = fA5202.header;
@@ -89,71 +47,58 @@ bool FROG::UnpackBoard(const Ring::Fragment &f){
 		return false;
 	}
 
+	FROGData &d = *fData;
 	uint8_t base = fA5202.mode & 0x0F;
-	FrogBoard b;
-	b.sourceID      = f.sourceID;
-	b.mode          = fA5202.mode;
-	b.fragTimestamp = f.timestamp;
+	int board = -1;
 
 	if (base == DTQ_SPECT || base == DTQ_TSPECT){
 		const SpectEvent &e = fA5202.spect;
-		b.board      = e.hdr.board;
-		b.time_in_ns = e.hdr.time_in_ns;
-		b.triggerID  = e.trigger_id;
-		b.tstamp_us  = e.hdr.tstamp_us;
+		board = e.hdr.board;
+		d.fBoardTrigID.push_back(e.trigger_id);
+		d.fBoardTime.push_back(e.hdr.tstamp_us);
 		for (size_t i = 0; i < e.channels.size(); i++){
 			const SpectChannel &c = e.channels[i];
-			FrogHit h;
-			h.board   = b.board;
-			h.channel = c.channel;
-			h.has_lg  = c.has_lg;   h.lg  = c.energyLG;
-			h.has_hg  = c.has_hg;   h.hg  = c.energyHG;
-			h.has_toa = c.has_toa;  h.toa = c.toa;
-			h.has_tot = c.has_tot;  h.tot = c.tot;
-
-			// Setting angles
-			SetAngles(h, geometry); // geometry is public class member (FROGGeometry) of FROG class
-
-			fReadPerBoard[b.board]++;
-			if (Keep(h)){
-				hits.push_back(h);
-				fHitsPerBoard[b.board] += e.channels.size();
-			}
+			d.fBoard.push_back(board);
+			d.fChannel.push_back(c.channel);
+			d.fLG.push_back(c.has_lg   ? c.energyLG : kNone);
+			d.fHG.push_back(c.has_hg   ? c.energyHG : kNone);
+			d.fToA.push_back(c.has_toa ? c.toa      : kNone);
+			d.fToT.push_back(c.has_tot ? c.tot      : kNone);
 		}
+		fChannelsPerBoard[board] += e.channels.size();
 	}
 	else if (base == DTQ_TIMING){
 		const TimingEvent &e = fA5202.timing;
-		b.board      = e.hdr.board;
-		b.time_in_ns = e.hdr.time_in_ns;
-		b.tstamp_us  = e.hdr.tstamp_us;
+		board = e.hdr.board;
+		d.fBoardTrigID.push_back(0);
+		d.fBoardTime.push_back(e.hdr.tstamp_us);
 		for (size_t i = 0; i < e.hits.size(); i++){
 			const TimingHit &t = e.hits[i];
-			FrogHit h;
-			h.board   = b.board;
-			h.channel = t.channel;
-			h.has_toa = t.has_toa;  
-			h.toa = t.toa;
-			h.has_tot = t.has_tot;  
-			h.tot = t.tot;
-
-			// Setting angles
-			SetAngles(h, geometry); // geometry is public class member (FROGGeometry) of FROG class
-
-			fReadPerBoard[b.board]++;
-			if (Keep(h)){
-				hits.push_back(h);
-				fHitsPerBoard[b.board] += e.hits.size();
-			}
+			d.fBoard.push_back(board);
+			d.fChannel.push_back(t.channel);
+			d.fLG.push_back(kNone);
+			d.fHG.push_back(kNone);
+			d.fToA.push_back(t.has_toa ? t.toa : kNone);
+			d.fToT.push_back(t.has_tot ? t.tot : kNone);
 		}
+		fChannelsPerBoard[board] += e.hits.size();
 	}
 	else {
-		// DTQ_COUNT: decoded into fA5202.counting but not exported yet
-		b.board     = fA5202.counting.hdr.board;
-		b.triggerID = fA5202.counting.trigger_id;
-		b.tstamp_us = fA5202.counting.hdr.tstamp_us;
+		// DTQ_COUNT: decoded into fA5202.counting but not stored
+		board = fA5202.counting.hdr.board;
+		d.fBoardTrigID.push_back(fA5202.counting.trigger_id);
+		d.fBoardTime.push_back(fA5202.counting.hdr.tstamp_us);
 	}
+	d.fBoardID.push_back(board);
+	d.fNBoards = (Int_t)d.fBoardID.size();
 
-	boards.push_back(b);
+	// angles and cut flags are filled later; keep the vectors the same length
+	size_t n = d.fBoard.size();
+	d.fTheta.resize(n, kNone);  d.fDTheta.resize(n, kNone);
+	d.fPhi.resize(n, kNone);    d.fDPhi.resize(n, kNone);
+	d.fPass.resize(n, 1);
+	d.fMult  = (Int_t)n;
+	d.fNPass = (Int_t)n;
 	return true;
 }
 
@@ -165,17 +110,11 @@ void FROG::PrintSummary() const{
 	std::cout << "\n";
 	for (std::map<uint32_t, RunHeader>::const_iterator it = headers.begin(); it != headers.end(); ++it){
 		const RunHeader &h = it->second;
-		std::cout << "  header sid " << it->first
-		          << ": run " << h.runnumber
-		          << "  board type " << h.boardtype
+		std::cout << "  header board " << it->first << ": run " << h.runnumber
 		          << "  acqmode 0x" << std::hex << (int)h.acqmode << std::dec
-		          << "  timeunit " << (int)h.timeunit
 		          << "  LSB " << h.timeconversion << " ns\n";
 	}
-	std::cout << "  zero suppression " << (zeroSuppress ? "ON" : "OFF") << "\n";
-	for (std::map<int, long>::const_iterator it = fReadPerBoard.begin(); it != fReadPerBoard.end(); ++it){
-		std::map<int, long>::const_iterator k = fHitsPerBoard.find(it->first);
-		long kept = (k == fHitsPerBoard.end()) ? 0 : k->second;
-		std::cout << "  board " << it->first << ": " << it->second << " channels read, " << kept << " kept\n";
+	for (std::map<int, long>::const_iterator it = fChannelsPerBoard.begin(); it != fChannelsPerBoard.end(); ++it){
+		std::cout << "  board " << it->first << ": " << it->second << " channels read\n";
 	}
 }

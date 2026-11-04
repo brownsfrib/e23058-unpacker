@@ -1,0 +1,17 @@
+% FROGConfig.dat - read by bin/unpacker (paths relative to the project directory)
+% Format: [section], then KEY values...   (% or # = comment; repeatable keys allowed)
+
+[geometry]
+CHANNEL_TABLE   input/FROG/FROG_channel_theta_phi.dat	% from tools/toBinary_FROG, see input/FROG/README.md
+
+[physics]
+% 1. zero suppression: keep a hit if it has ToA/ToT, or HG >= HG threshold (threshold > 0)
+ZERO_SUPPRESS         0
+HG_THRESHOLD          1000		% all channels
+HG_THRESHOLD_CHANNEL  2 46 900		% board channel threshold (repeat as needed)
+% 2. FROG.fPass = ToT >= TOT_CUT (< 0: no cut) && LG >= LG_MIN && HG >= HG_MIN (0: no cut)
+TOT_CUT               10
+LG_MIN                0
+HG_MIN                0
+% 3. 1 = remove hits with fPass = 0 from the tree
+DROP_FAILED           0

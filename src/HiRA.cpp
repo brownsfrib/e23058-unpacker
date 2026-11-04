@@ -82,26 +82,6 @@ bool HiRA::Unpack(const Ring::Fragment &frag){
 	return true;
 }
 
-bool HiRA::RelativeTime(const V1190Hit &hit, double &t) const{
-	int ref = tdcMap.Get(hit.channel).referenceChannel;
-	if (ref < 0){
-		t = hit.time;			// no reference: raw
-		return true;
-	}
-	for (size_t i = 0; i < tdc.hits.size(); i++){
-		const V1190Hit &r = tdc.hits[i];
-		if (
-			(r.channel == ref) && 
-			(r.order == 0) && 
-			(!r.trailing)
-		){
-			t = (double)hit.time - (double)r.time;
-			return true;
-		}
-	}
-	return false;				// reference channel did not fire
-}
-
 void HiRA::PrintSummary() const{
 	std::cout << "HiRA: " << fEvents << " events decoded, " << fStripHits << " strip hits\n";
 	if (fCounterSkew){

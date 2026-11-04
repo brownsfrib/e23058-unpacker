@@ -1,5 +1,11 @@
 .nfs*
 *.o
 *.d
-output
-bin/unpacker
+build/
+lib/
+bin/
+output/
+__pycache__/
+*.swp
+notes
+calibrations

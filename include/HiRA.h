@@ -12,11 +12,12 @@
 #include "HINP.h"
 #include "V785.h"
 #include "V1190.h"
-#include "TDCMap.h"
-#include "HiRAGeometry.h"
 
 /**
- * !\brief HiRA: one VM-USB stack, decoded in stack order.
+ * !\brief HiRA reader: one VM-USB stack, decoded in stack order.
+ *
+ * Decoding only. Mapping strips/CsI to telescopes and filling HiRAData is
+ * HiRAGeometry::Map(); the auxiliary TDC channels go to TDCData via TDCMapping.
  *
  *   preamble   7 words: word count (rest of payload), 2 x 0, 64-bit timestamp
  *   HINP       motherboard 1 (marker 0x1ff3)
@@ -37,15 +38,6 @@ class HiRA : public Detector{
 		bool Unpack(const Ring::Fragment &frag) override;
 		void PrintSummary() const override;
 
-		// TDC: mapping and reference-subtracted time.
-		// Returns false if the channel has no hit-0 reference this event.
-		const TDCMapEntry &TDCVariable(int channel) const { return tdcMap.Get(channel); }
-		bool RelativeTime(const V1190Hit &hit, double &t) const;
-
-		const HiRAChannel *StripGeometry(const HINPStrip& strip) const{
-			return geometry.Get(strip.motherboard, strip.chip, strip.strip);
-		}
-
 		// this event
 		uint64_t timestamp;
 		std::vector<HINPStrip> strips;	// both motherboards
@@ -54,10 +46,6 @@ class HiRA : public Detector{
 		V785  adc1;
 		V785  adc2;
 		V1190 tdc;
-
-		// run level
-		TDCMap tdcMap;
-		HiRAGeometry geometry;
 
 	private:
 		bool Fail(const char *stage);

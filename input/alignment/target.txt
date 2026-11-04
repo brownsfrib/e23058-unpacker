@@ -1,0 +1,6 @@
+# Target position, survey coordinates (m): X Y Z
+# Read by input/HIRA/geometry/build_hira_geometry.py and input/FROG/geometry/barrel-geometry.py.
+# PLACEHOLDER: where the HiRA telescope normals meet, projected onto the beam axis
+# (the "normals" value build_hira_geometry.py prints if this file is removed).
+# Replace with the surveyed target position when it exists, then regenerate BOTH detectors.
+262.970308 502.252912 50.999884
