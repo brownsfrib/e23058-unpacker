@@ -9,3 +9,7 @@ __pycache__/
 *.swp
 notes
 calibrations
+output
+testMacro
+compile.sh
+push.sh
