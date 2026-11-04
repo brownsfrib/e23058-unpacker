@@ -235,7 +235,8 @@ def element_samples():
             u, v = strip_pos(i, EF_REVERSED), strip_pos(j, EB_REVERSED)
             els[("PX", i, j)] = grid(u - w, u + w, v - w, v + w, N_PIXEL, N_PIXEL)
     for q, (us, vs) in {0: (-1, 1), 1: (-1, -1), 2: (1, -1), 3: (1, 1)}.items():
-        # CsI quadrant: 0 top-left, 1 bottom-left, 2 bottom-right, 3 top-right
+        # detector-frame quadrant d: 0 top-left, 1 bottom-left, 2 bottom-right, 3 top-right
+        # (seen from the target); the CsI INDEX is assigned from the lab angles, see csi_lab_order
         u0, u1 = sorted((0, us * a)); v0, v1 = sorted((0, vs * a))
         els[("CSI", q)] = grid(u0, u1, v0, v1, 40, 40)
     groups = {}
@@ -244,6 +245,24 @@ def element_samples():
         groups.setdefault(g, ([], [], []))
         groups[g][0].append(k); groups[g][1].append(u); groups[g][2].append(v)
     return {g: (keys, np.stack(us), np.stack(vs)) for g, (keys, us, vs) in groups.items()}
+
+
+def csi_lab_order(t, r):
+    """CsI index for each detector quadrant d, from where the crystal sits on a theta/phi plot
+    (theta on x, phi on y): 0 = lowest theta & lowest phi (bottom-left), then CLOCKWISE
+    1 = top-left, 2 = top-right, 3 = bottom-right. Override per telescope in hira_config.json with
+    "csi_order": [index of d=0, d=1, d=2, d=3]."""
+    if t.get("csi_order"):
+        return list(t["csi_order"])
+    th = np.array([r["theta"][("CSI", d)] for d in range(4)])
+    ph = np.array([r["phi"][("CSI", d)] for d in range(4)])
+    ang = np.degrees(np.arctan2(ph - ph.mean(), th - th.mean())) % 360    # position around the centre
+    first = int(np.argmin(np.abs((ang - 225 + 180) % 360 - 180)))        # nearest to bottom-left
+    cw = sorted(range(4), key=lambda d: (ang[first] - ang[d]) % 360)    # clockwise from there
+    lab = [0] * 4
+    for idx, d in enumerate(cw):
+        lab[d] = idx
+    return lab
 
 
 def csi_quadrant(ef, eb):
@@ -382,6 +401,16 @@ def write_outputs(cfg, results):
     sys_cols = lambda r, k: [f6(r["dtheta_sys"][k]), f6(r["dphi_sys"][k])]
     sys_hdr = ["dtheta_sys", "dphi_sys"]
 
+    lab = {t["id"]: csi_lab_order(t, results[t["id"]]) for t in cfg["telescopes"]}
+    print("\nCsI index per detector quadrant (top-left, bottom-left, bottom-right, top-right as seen"
+          " from the target);\n  index 0 = lowest theta/phi, clockwise on a theta/phi plot")
+    for t in cfg["telescopes"]:
+        r = results[t["id"]]
+        cells = "  ".join(f"q{lab[t['id']][d]}=({r['theta'][('CSI', d)]:5.1f},{r['phi'][('CSI', d)]:6.1f})"
+                          for d in sorted(range(4), key=lambda d: lab[t["id"]][d]))
+        print(f"  P{t['id']:<2} {lab[t['id']]}{' (override)' if t.get('csi_order') else ''}   {cells}")
+    cq = lambda tid, ef, eb: lab[tid][csi_quadrant(ef, eb)]
+
     with open(os.path.join(OUT_DIR, "HiRA_strips.csv"), "w", newline="") as fs, \
          open(os.path.join(OUT_DIR, "HiRA_channel_theta_phi.txt"), "w") as fl:
         w = csv.writer(fs)
@@ -403,9 +432,9 @@ def write_outputs(cfg, results):
                     k = (face, i)
                     # the two CsI behind the strip: vary the OTHER face across both halves
                     if face == "EF":
-                        csi = sorted({4 * t["id"] + csi_quadrant(i, j) for j in (0, N_STRIPS - 1)})
+                        csi = sorted({4 * t["id"] + cq(t["id"], i, j) for j in (0, N_STRIPS - 1)})
                     else:
-                        csi = sorted({4 * t["id"] + csi_quadrant(j, i) for j in (0, N_STRIPS - 1)})
+                        csi = sorted({4 * t["id"] + cq(t["id"], j, i) for j in (0, N_STRIPS - 1)})
                     w.writerow([t["id"], face, i, t["motherboard"], slot, board, chip,
                                 t["det_code"], thick, csi[0], csi[1]] + angle_cols(r, k) + sys_cols(r, k))
                     fl.write(f"{t['motherboard']} {chip} {t['det_code']} {i} {t['id']} "
@@ -420,7 +449,7 @@ def write_outputs(cfg, results):
             for i in range(N_STRIPS):
                 for j in range(N_STRIPS):
                     k = ("PX", i, j)
-                    w.writerow([t["id"], i, j, 4 * t["id"] + csi_quadrant(i, j),
+                    w.writerow([t["id"], i, j, 4 * t["id"] + cq(t["id"], i, j),
                                 f6(r["theta"][k]), f6(r["dtheta"][k]), f6(r["phi"][k]), f6(r["dphi"][k])]
                                + sys_cols(r, k))
 
@@ -429,11 +458,12 @@ def write_outputs(cfg, results):
         w.writerow(["csi", "telescope", "quadrant", "adc_module", "adc_channel", "tdc_channel"] + ang_hdr + sys_hdr)
         for t in cfg["telescopes"]:
             r = results[t["id"]]
-            for q in range(4):
+            for q in range(4):                       # q = CsI index (lab order)
+                d = lab[t["id"]].index(q)            # detector quadrant holding it
                 cid = 4 * t["id"] + q
                 am, ac = adc.get(cid, (-1, -1))
-                w.writerow([cid, t["id"], q, am, ac, tdc.get(cid, (0, -1))[1]] + angle_cols(r, ("CSI", q))
-                           + sys_cols(r, ("CSI", q)))
+                w.writerow([cid, t["id"], q, am, ac, tdc.get(cid, (0, -1))[1]] + angle_cols(r, ("CSI", d))
+                           + sys_cols(r, ("CSI", d)))
     print(f"\nwrote HiRA_strips.csv, HiRA_pixels.csv, HiRA_csi.csv, HiRA_channel_theta_phi.txt to {OUT_DIR}/")
     missing = [c for c in range(48) if c not in adc]
     if missing:

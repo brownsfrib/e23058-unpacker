@@ -51,7 +51,7 @@ CsI, one entry per crystal above CSI_E_RAW_THRESHOLD and not disabled:
 |---|---|---|---|
 | fCsImulti | Int_t | – | |
 | fCsInumtel | vector<Int_t> | fCsImulti | telescope |
-| fCsInumcsi | vector<Int_t> | fCsImulti | 0–3 (0 top-left, 1 bottom-left, 2 bottom-right, 3 top-right) |
+| fCsInumcsi | vector<Int_t> | fCsImulti | 0–3: on a θ/φ plot 0 = lowest θ & φ, then clockwise (1 low θ high φ, 2 high θ high φ, 3 high θ low φ) |
 | fCsIRawADC | vector<Double_t> | fCsImulti | raw V785 |
 | fCsITime | vector<Double_t> | fCsImulti | raw V1190 (first leading edge) |
 

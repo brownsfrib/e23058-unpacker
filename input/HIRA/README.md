@@ -27,6 +27,10 @@ ADC/TDC channel. Then plot `HIRA.fTheta:HIRA.fPhi` from data. No rebuild is need
 Commit the edited sources **and** every regenerated file together.
 
 Notes
+- CsI index within a telescope: on a theta/phi plot 0 = lowest theta & phi, then clockwise.
+  Assigned from the lab angles (the builder prints the table), so rotated mounts (P1-3, P7) get the
+  same convention. Override a telescope with `"csi_order": [i0, i1, i2, i3]` in hira_config.json.
+  ADCMapping csi_N = 4*P + index.
 - dtheta/dphi = half-widths; `dtheta_sys`/`dphi_sys` (CSV only) = survey/target uncertainty.
 - Electronics: board = slot + 1; odd strips on chip 2·board−1, even strips on chip 2·board.
 - Telescopes with dead hardware: `DISABLE_ALL TELE<n>` in HiRAConfig.dat, not the geometry.

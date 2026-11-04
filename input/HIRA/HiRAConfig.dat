@@ -17,7 +17,7 @@ SI_EF_E_RAW_THRESHOLD                  150
 SI_EB_E_RAW_THRESHOLD                  150
 SI_EF_E_THRESHOLD                      0.5
 SI_EB_E_THRESHOLD                      0.5
-CSI_E_RAW_THRESHOLD                    150
+CSI_E_RAW_THRESHOLD                    300
 % front/back pairing: |E_EF - E_EB|/2 < N_SIGMA * SIGMA (MeV)
 STRIP_ENERGY_MATCHING_SIGMA            1.0
 STRIP_ENERGY_MATCHING_NUMBER_OF_SIGMA  5
