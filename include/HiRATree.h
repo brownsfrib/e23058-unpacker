@@ -10,6 +10,7 @@
 
 // Unpacker includes
 #include "HiRA.h"
+#include "HiRAPhysics.h"
 
 /**
  * !\brief Writes the HiRA TTree (one entry per kept event).
@@ -25,7 +26,7 @@ class HiRATree{
 		static const int kMaxStrips = 512;
 		static const int kMaxTDC    = 256;
 
-		HiRATree(HiRA &hira, const char *name = "HiRA");
+		HiRATree(HiRA &hira, const HiRAPhysics *phys = nullptr, const char *name = "HiRA");
 
 		bool Build();		// copy this event into the buffers; true if anything to write
 		void Fill(Long64_t eventNumber, ULong64_t timestamp);
@@ -33,6 +34,7 @@ class HiRATree{
 
 	private:
 		HiRA  &fHiRA;
+		const HiRAPhysics *fPhys;
 		TTree *fTree;
 
 		Long64_t  fEventNumber;
@@ -61,6 +63,20 @@ class HiRATree{
 		Int_t     fTDCMult;
 		Int_t     fTDCChannel[kMaxTDC];
 		Double_t  fTDCTime[kMaxTDC];
+
+		// reconstructed tracks (from HiRAPhysics)
+		Int_t     fNTrk;
+		Int_t     fTrkTele[kMaxStrips];
+		Int_t     fTrkEF[kMaxStrips];
+		Int_t     fTrkEB[kMaxStrips];
+		Double_t  fTrkEFE[kMaxStrips];
+		Double_t  fTrkEBE[kMaxStrips];
+		Int_t     fTrkCsI[kMaxStrips];
+		Double_t  fTrkCsIRaw[kMaxStrips];
+		Double_t  fTrkTheta[kMaxStrips];
+		Double_t  fTrkDTheta[kMaxStrips];
+		Double_t  fTrkPhi[kMaxStrips];
+		Double_t  fTrkDPhi[kMaxStrips];
 };
 
 #endif // HIRATREE_H

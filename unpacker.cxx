@@ -51,7 +51,7 @@ int main(int argc, char *argv[]){
 	std::string basePath  = requireEnv("basePath");
 	std::string stageArea = requireEnv("REGLOM");
 	std::string runString = requireEnv("RUN");
-	const std::string projectPath = basePath + "/FROG/combined-unpacker";
+	const std::string projectPath = basePath + "/combined-unpacker";
 
 	std::string runPath = stageArea + "run-" + runString + "-reglom.evt";
 	if (gSystem->AccessPathName(runPath.c_str())){
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]){
 	TFile *outputFile = TFile::Open(outputPath.c_str(), "RECREATE");
 
 	FROGTree frogTree(frog);		// tree "FROG"
-	HiRATree hiraTree(hira);		// tree "HiRA"
+	HiRATree hiraTree(hira, &hiraPhysics);	// tree "HiRA"
 	frogTree.totCut = 10;			// FROG channels need ToT >= 10 (< 0: no cut)
 
 	// ---- event loop ----
@@ -131,6 +131,7 @@ int main(int argc, char *argv[]){
 		written++;
 	}
 
+	hiraPhysics.PrintSummary();
 	unpacker.PrintSummary();
 
 	outputFile->Write();

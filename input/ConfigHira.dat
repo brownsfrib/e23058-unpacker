@@ -4,7 +4,7 @@
 ConfigHira
 
 % --- front/back strip pairing (calibrated energies)
-STRIP_ENERGY_MATCHING_SIGMA              0.020
+STRIP_ENERGY_MATCHING_SIGMA              1.000
 STRIP_ENERGY_MATCHING_NUMBER_OF_SIGMA    5
 MAX_STRIP_MULTIPLICITY                   8
 

@@ -2,7 +2,7 @@
 
 static const double kDefault = -10000;
 
-HiRATree::HiRATree(HiRA &hira, const char *name) : fHiRA(hira){
+HiRATree::HiRATree(HiRA &hira, const HiRAPhysics *phys, const char *name) : fHiRA(hira), fPhys(phys){
 	fTree = new TTree(name, "HiRA (silicon strips, CsI, TDC)");	// owned by the open TFile
 
 	fTree->Branch("eventNumber",    &fEventNumber, "eventNumber/L");
@@ -28,6 +28,20 @@ HiRATree::HiRATree(HiRA &hira, const char *name) : fHiRA(hira){
 	fTree->Branch("hiraTDCMult",    &fTDCMult,     "hiraTDCMult/I");
 	fTree->Branch("hiraTDCChannel", fTDCChannel,   "hiraTDCChannel[hiraTDCMult]/I");
 	fTree->Branch("hiraTDCTime",    fTDCTime,      "hiraTDCTime[hiraTDCMult]/D");	// raw
+
+	// reconstructed tracks: one entry per paired front x back pixel
+	fTree->Branch("hiraNTrk",       &fNTrk,        "hiraNTrk/I");
+	fTree->Branch("hiraTrkTele",    fTrkTele,      "hiraTrkTele[hiraNTrk]/I");
+	fTree->Branch("hiraTrkEF",      fTrkEF,        "hiraTrkEF[hiraNTrk]/I");
+	fTree->Branch("hiraTrkEB",      fTrkEB,        "hiraTrkEB[hiraNTrk]/I");
+	fTree->Branch("hiraTrkEFE",     fTrkEFE,       "hiraTrkEFE[hiraNTrk]/D");	// MeV
+	fTree->Branch("hiraTrkEBE",     fTrkEBE,       "hiraTrkEBE[hiraNTrk]/D");
+	fTree->Branch("hiraTrkCsI",     fTrkCsI,       "hiraTrkCsI[hiraNTrk]/I");	// CsI behind the pixel
+	fTree->Branch("hiraTrkCsIRaw",  fTrkCsIRaw,    "hiraTrkCsIRaw[hiraNTrk]/D");	// 0 if it did not fire
+	fTree->Branch("hiraTrkTheta",   fTrkTheta,     "hiraTrkTheta[hiraNTrk]/D");	// pixel angles
+	fTree->Branch("hiraTrkDTheta",  fTrkDTheta,    "hiraTrkDTheta[hiraNTrk]/D");
+	fTree->Branch("hiraTrkPhi",     fTrkPhi,       "hiraTrkPhi[hiraNTrk]/D");
+	fTree->Branch("hiraTrkDPhi",    fTrkDPhi,      "hiraTrkDPhi[hiraNTrk]/D");
 }
 
 bool HiRATree::Build(){
@@ -68,6 +82,26 @@ bool HiRATree::Build(){
 		fTDCChannel[fTDCMult] = h.channel;
 		fTDCTime[fTDCMult]    = h.time;
 		fTDCMult++;
+	}
+
+	// reconstructed tracks
+	fNTrk = 0;
+	if (fPhys){
+		for (size_t i = 0; i < fPhys->tracks.size() && fNTrk < kMaxStrips; i++){
+			const HiRATrack &t = fPhys->tracks[i];
+			fTrkTele[fNTrk]   = t.telescope;
+			fTrkEF[fNTrk]     = t.ef;
+			fTrkEB[fNTrk]     = t.eb;
+			fTrkEFE[fNTrk]    = t.efEnergy;
+			fTrkEBE[fNTrk]    = t.ebEnergy;
+			fTrkCsI[fNTrk]    = t.csiId;
+			fTrkCsIRaw[fNTrk] = t.csiRaw;
+			fTrkTheta[fNTrk]  = t.theta;
+			fTrkDTheta[fNTrk] = t.dtheta;
+			fTrkPhi[fNTrk]    = t.phi;
+			fTrkDPhi[fNTrk]   = t.dphi;
+			fNTrk++;
+		}
 	}
 
 	return fHiRA.fired;
