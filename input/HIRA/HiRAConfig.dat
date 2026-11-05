@@ -24,11 +24,6 @@ STRIP_ENERGY_MATCHING_NUMBER_OF_SIGMA  5
 MAX_STRIP_MULTIPLICITY                 8
 MAX_TRACKS_PER_TELESCOPE               4
 
-% CsI quality: pixel in boundary band if EF or EB strip is in [min, max]
-CSI_BOUNDARY_EF 15 16
-CSI_BOUNDARY_EB 15 16
-CSI_DROP_FLAGS  0	% 0 = keep all; example: 7 = write onlyclean particles
-
 % dead / noisy channels: TELE<n>STREF<strip>, TELE<n>STREB<strip>, TELE<n>CSI<crystal 0-3>
 
 % Telescope 0
@@ -46,11 +41,14 @@ DISABLE_CHANNEL	 TELE6STREB15
 % Telescope 8
 DISABLE_CHANNEL  TELE8STREB24
 
-
 % Telescope 11
-DISABLE_CHANNEL  TELE8STREF29
-DISABLE_CHANNEL  TELE8STREF31
+DISABLE_CHANNEL  TELE11STREF29
+DISABLE_CHANNEL  TELE11STREF31
 
 % Not plugged in properly/not biasing properly during experiment
-DISABLE_ALL    TELE4
-DISABLE_ALL    TELE5
+DISABLE_ALL    	 TELE4
+DISABLE_ALL    	 TELE5
+
+NEIGHBOUR_DISTANCE 			1.414
+IGNORE_NOT_MATCHING_CSI			1
+

@@ -25,26 +25,63 @@
  * Steps: CsI threshold -> front/back pairing -> particles with the pixel's
  * CsI and angles. Not yet: neighbour merging, requiring a CsI hit.
  */
+
+
+// A front x back strip pair that passes the energy match (indices into the HiRAData EF/EB blocks).
+struct HiRAStripPair{
+	double dE = 0;		// |E_EF - E_EB|, MeV
+	int    f  = -1;		// index into the fEF* vectors
+	int    b  = -1;		// index into the fEB* vectors
+};
+
+// A silicon track in one telescope while HiRAPhysics::Apply() builds particles.
+struct HiRATrack{
+	int              f    = -1;		// index into the fEF* vectors
+	int              b    = -1;		// index into the fEB* vectors
+	int              csi  = -1;		// CsI behind the pixel, 0-3 (-1 if none)
+	double           eF   = 0;		// front energy, MeV (summed if merged)
+	double           eB   = 0;		// back energy, MeV (summed if merged)
+	const HiRAPixel *px   = nullptr;	// pixel angles
+	bool             keep = true;		// false = merged away or rejected
+};
+
+
 class HiRAPhysics{
 	public:
-		static const int kTelescopes = 12, kStrips = 32, kCrystals = 4;
+		static const int kTelescopes 	= 12;
+		static const int kStrips 	= 32; 
+		static const int kCrystals 	= 4;
 
 		explicit HiRAPhysics(const HiRAGeometry &geo) : fGeo(geo) {}
 		bool Load(const Config &cfg);
 		void Apply(HiRAData &data);
 		void PrintSummary() const;
+		static bool SmallerDE(const HiRAStripPair &a, const HiRAStripPair &b);
+
 
 	private:
-		bool StripEnabled(int t, int face, int s) const { return t >= 0 && t < kTelescopes && s >= 0 && s < kStrips && fStripOn[t][face][s]; }
-		bool CsIEnabled(int t, int c) const { return t >= 0 && t < kTelescopes && c >= 0 && c < kCrystals && fCsIOn[t][c]; }
+		bool StripEnabled(int t, int face, int s) const {
+			return t >= 0 && t < kTelescopes && s >= 0 && s < kStrips && fStripOn[t][face][s];
+		}
+		bool CsIEnabled(int t, int c) const {
+			return t >= 0 && t < kTelescopes && c >= 0 && c < kCrystals && fCsIOn[t][c];
+		}
 
 		const HiRAGeometry &fGeo;
 
-		double fEFRawThresh = 0, fEBRawThresh = 0, fEFThresh = 0, fEBThresh = 0, fCsIRawThresh = 0;
-		double fMatchSigma = 0.020, fMatchNSigma = 5;
-		int    fMaxStripMult = 8, fMaxTracks = 4;
-		bool   fStripOn[kTelescopes][2][kStrips];
-		bool   fCsIOn[kTelescopes][kCrystals];
+		double 	fEFRawThresh 		= 0;
+		double	fEBRawThresh 		= 0;
+		double	fEFThresh 		= 0;
+		double	fEBThresh 		= 0;
+		double	fCsIRawThresh 		= 0;
+		double 	fMatchSigma 		= 0.020;
+		double	fMatchNSigma 		= 5;
+		int     fMaxStripMult 		= 8;
+		int	fMaxTracks 		= 4;
+		double  fNeighbourDist 		= 1.41522; // sqrt(2) woooo we need a quake 3 algo in here
+		bool    fRequireCsI		= true;
+		bool    fStripOn[kTelescopes][2][kStrips];
+		bool    fCsIOn[kTelescopes][kCrystals];
 
 		std::map<std::string, long> fCount;
 };
