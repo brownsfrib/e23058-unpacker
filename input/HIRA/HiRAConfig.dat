@@ -17,7 +17,7 @@ SI_EF_E_RAW_THRESHOLD                  150
 SI_EB_E_RAW_THRESHOLD                  150
 SI_EF_E_THRESHOLD                      0.5
 SI_EB_E_THRESHOLD                      0.5
-CSI_E_RAW_THRESHOLD                    300
+CSI_E_RAW_THRESHOLD                    0 	% set at common pedestal for all CsI
 % front/back pairing: |E_EF - E_EB|/2 < N_SIGMA * SIGMA (MeV)
 STRIP_ENERGY_MATCHING_SIGMA            1.0
 STRIP_ENERGY_MATCHING_NUMBER_OF_SIGMA  5
@@ -49,6 +49,6 @@ DISABLE_CHANNEL  TELE11STREF31
 DISABLE_ALL    	 TELE4
 DISABLE_ALL    	 TELE5
 
-NEIGHBOUR_DISTANCE 			1.414
-IGNORE_NOT_MATCHING_CSI			1
+NEIGHBOUR_DISTANCE 			1.41422 % minimum distance for matching front/back pixels
+IGNORE_NOT_MATCHING_CSI			1	% 1=track is dropped if no hit above CSI_E_RAW_THRESHOLD 
 

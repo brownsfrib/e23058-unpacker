@@ -458,12 +458,13 @@ def write_outputs(cfg, results):
         w.writerow(["csi", "telescope", "quadrant", "adc_module", "adc_channel", "tdc_channel"] + ang_hdr + sys_hdr)
         for t in cfg["telescopes"]:
             r = results[t["id"]]
-            for q in range(4):                       # q = CsI index (lab order)
-                d = lab[t["id"]].index(q)            # detector quadrant holding it
-                cid = 4 * t["id"] + q
-                am, ac = adc.get(cid, (-1, -1))
-                w.writerow([cid, t["id"], q, am, ac, tdc.get(cid, (0, -1))[1]] + angle_cols(r, ("CSI", d))
-                           + sys_cols(r, ("CSI", d)))
+            for q in range(4):				# q = CsI index (lab order)
+                d = lab[t["id"]].index(q)		# detector quadrant holding it
+                cid = 4 * t["id"] + q			# label written out (lab index)
+                hw  = 4 * t["id"] + d			# ADC/TDC lookup (detector frame, as cabled)
+                am, ac = adc.get(hw, (-1, -1))
+                w.writerow([cid, t["id"], q, am, ac, tdc.get(hw, (0, -1))[1]] + angle_cols(r, ("CSI", d))
+		+ sys_cols(r, ("CSI", d)))
     print(f"\nwrote HiRA_strips.csv, HiRA_pixels.csv, HiRA_csi.csv, HiRA_channel_theta_phi.txt to {OUT_DIR}/")
     missing = [c for c in range(48) if c not in adc]
     if missing:
