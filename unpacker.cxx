@@ -1,15 +1,17 @@
 // E23058 unpacker: glommed NSCLDAQ .evt -> output/run_<RUN>.root, tree "E23058"
-// with branches FROG., HIRA., TDC. (one entry per kept event).
+// with branches FROG., HIRA., TDC., NWB., NWA., VETO. (one entry per kept event).
 //
 //   export REGLOM=/path/to/reglom/  RUN=0100
 //   ./bin/unpacker            (run from the project directory)
 //
 // Per detector:  reader -> Data -> Geometry -> [Calibration] -> Physics -> TreeWriter
-// Settings live in input/FROG/FROGConfig.dat and input/HIRA/HiRAConfig.dat.
+// Settings live in input/FROG/FROGConfig.dat, input/HIRA/HiRAConfig.dat and
+// input/PIXIE/PixieConfig.dat. NWB./NWA./VETO. are raw + channel map only (no calibration).
 
 // C++ includes
 #include <iostream>
 #include <string>
+#include <vector>
 
 // ROOT includes
 #include "TSystem.h"
@@ -33,6 +35,10 @@
 #include "TDCData.h"
 #include "TDCMapping.h"
 
+#include "Pixie.h"
+#include "PixieData.h"
+#include "PixieMapping.h"
+
 // ---- source IDs: FROG 3 (inner sids 0-5 = A5202 boards), Pixie 6, HiRA 7
 
 static std::string requireEnv(const char *name){
@@ -49,8 +55,9 @@ int main(){
 	const std::string runPath = requireEnv("REGLOM") + "/run-" + run + "-reglom.evt";
 
 	// ---- configuration
-	Config frogCfg, hiraCfg;
-	if (!frogCfg.Load("input/FROG/FROGConfig.dat") || !hiraCfg.Load("input/HIRA/HiRAConfig.dat")){
+	Config frogCfg, hiraCfg, pixieCfg;
+	if (!frogCfg.Load("input/FROG/FROGConfig.dat") || !hiraCfg.Load("input/HIRA/HiRAConfig.dat") ||
+	    !pixieCfg.Load("input/PIXIE/PixieConfig.dat")){
 		std::cerr << "\033[1;31mRun ./bin/unpacker from the project directory.\033[0m\n";
 		return 1;
 	}
@@ -76,14 +83,34 @@ int main(){
 	    !tdcMap.Load(hiraCfg.GetString("geometry", "TDC_MAPPING"))){
 		return 1;
 	}
+
+	// ---- Pixie / DDAS: every decoded hit -> pixieAll (not written), split by
+	//      the channel map into one PixieData per wall: NWB, NWA (LANA), VETO
+	PixieData    pixieAll, nwbData, nwaData, vetoData;
+	Pixie        pixie(&pixieAll, pixieCfg.GetInt("readout", "WRITE_TRACES", 0) != 0);
+	PixieMapping pixieMap;
+	const bool   keepPixieOnly = pixieCfg.GetInt("readout", "KEEP_PIXIE_ONLY", 1) != 0;
+	std::vector<std::vector<std::string>> pixieSIDs = pixieCfg.GetAll("readout", "SOURCE_ID");
+	if (!pixieMap.Load(pixieCfg)){
+		return 1;
+	}
+
 	frogCfg.ReportUnused();
 	hiraCfg.ReportUnused();
+	pixieCfg.ReportUnused();
 
 	// ---- input / output
 	Unpacker unpacker;
 	unpacker.Register(3, &frog);
 	unpacker.Register(7, &hira);
-	// unpacker.Register(6, &pixie);	// once Pixie is written
+	if (pixieSIDs.empty()){
+		unpacker.Register(6, &pixie);
+	}
+	for (size_t i = 0; i < pixieSIDs.size(); i++){
+		for (size_t j = 0; j < pixieSIDs[i].size(); j++){
+			unpacker.Register((uint32_t)std::stoul(pixieSIDs[i][j]), &pixie);
+		}
+	}
 	if (!unpacker.Open(runPath)){
 		return 1;
 	}
@@ -95,6 +122,9 @@ int main(){
 	writer.Add("FROG.", &frogData);
 	writer.Add("HIRA.", &hiraData);
 	writer.Add("TDC.",  &tdcData);
+	writer.Add("NWB.",  &nwbData);
+	writer.Add("NWA.",  &nwaData);
+	writer.Add("VETO.", &vetoData);
 
 	// ---- event loop
 	while (unpacker.NextEvent()){
@@ -113,7 +143,10 @@ int main(){
 		hiraPhys.Apply(hiraData);
 		tdcMap.Fill(hira.tdc, tdcData);
 
-		if (frogData.fNPass == 0 && !hira.fired){
+		pixieMap.Split(pixieAll, nwbData, nwaData, vetoData);
+
+		const bool pixieHits = (nwbData.fMult > 0 || nwaData.fMult > 0 || vetoData.fMult > 0);
+		if (frogData.fNPass == 0 && !hira.fired && !(keepPixieOnly && pixieHits)){
 			continue;			// nothing worth writing
 		}
 		writer.Fill(unpacker.eventTimestamp);
@@ -122,11 +155,12 @@ int main(){
 
 	hiraGeo.PrintSummary();
 	hiraPhys.PrintSummary();
-	unpacker.PrintSummary();		// includes FROG / HiRA reader summaries
+	unpacker.PrintSummary();		// includes FROG / HiRA / Pixie reader summaries
+	pixieMap.PrintSummary();
 
 	Long64_t n = writer.Entries();
 	writer.Close();
-	std::cout << "\033[1;35mWrote " << n << " events (tree E23058: FROG. HIRA. TDC.) to output/run_"
+	std::cout << "\033[1;35mWrote " << n << " events (tree E23058: FROG. HIRA. TDC. NWB. NWA. VETO.) to output/run_"
 	          << run << ".root\033[0m\n";
 	return 0;
 }

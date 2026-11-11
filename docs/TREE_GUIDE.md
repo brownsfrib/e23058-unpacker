@@ -78,3 +78,33 @@ Raw first leading-edge time (V1190 LSB); -10000 = no hit.
 | fChannels | map<string, Double_t> — only the channels that fired: `for (auto &c : tdc->fChannels)` |
 
 CsI times are in `HIRA.fCsITime`, not here.
+
+## NWB., NWA., VETO. (PixieData) — Pixie-16 / DDAS hits, raw + channel map (no calibration)
+Three branches with the same class, one per wall:
+`NWB.` = LANA neutron wall B (facing the target), `NWA.` = LANA neutron wall A (behind NWB), `VETO.` = WMU VETO wall.
+One entry per DDAS hit, in arrival order. Map: `input/PIXIE/Pixie_ChannelMapping.txt`; hits on unmapped channels are not written.
+| member | type | length | units / meaning |
+|---|---|---|---|
+| fMult | Int_t | – | hits on this wall |
+| fCrate, fSlot, fChannel | vector<Int_t> | fMult | electronics address |
+| fEnergy | vector<Int_t> | fMult | on-board trapezoidal filter, ADC units |
+| fTime | vector<Double_t> | fMult | ns, timestamp + CFD correction (DDASFormat convention) |
+| fCoarseTime | vector<ULong64_t> | fMult | ns, timestamp only (500 MSPS: clock × 10) |
+| fCFD | vector<Int_t> | fMult | raw CFD fraction (13 bits at 500 MSPS) |
+| fCFDTrigSource | vector<Int_t> | fMult | 500 MSPS: which of the 5 sub-samples fired |
+| fCFDFail | vector<Int_t> | fMult | 1 = CFD failed (trig source 7) |
+| fFinishCode | vector<Int_t> | fMult | 1 = pileup |
+| fOverflow | vector<Int_t> | fMult | 1 = ADC out of range |
+| fTraceLength | vector<Int_t> | fMult | samples |
+| fExtTimestamp | vector<ULong64_t> | fMult | external clock, 0 if not enabled |
+| fEnergySums | vector<vector<UInt_t>> | fMult | 4 per hit, empty if not enabled |
+| fQDCSums | vector<vector<UInt_t>> | fMult | 8 per hit, empty if not enabled |
+| fTrace | vector<vector<UShort_t>> | fMult | empty unless WRITE_TRACES 1 |
+| fModule | vector<Int_t> | fMult | map "Module" = fSlot − FIRST_SLOT |
+| fBar | vector<Int_t> | fMult | bar |
+| fSide | vector<Int_t> | fMult | NWB./NWA.: 0 = L, 1 = R;  VETO.: 0 = T, 1 = B |
+
+```cpp
+t->Draw("NWB.fEnergy:NWB.fBar", "NWB.fSide == 0");   // NWB left PMTs: energy vs bar
+t->Draw("VETO.fEnergy:VETO.fBar", "VETO.fSide == 0"); // VETO top PMTs
+```

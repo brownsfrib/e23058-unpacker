@@ -8,5 +8,8 @@
 #pragma link C++ class FROGData+;
 #pragma link C++ class HiRAData+;
 #pragma link C++ class TDCData+;
+#pragma link C++ class PixieData+;
 #pragma link C++ class std::map<std::string, double>+;
+#pragma link C++ class std::vector<std::vector<unsigned int>>+;
+#pragma link C++ class std::vector<std::vector<unsigned short>>+;
 #endif

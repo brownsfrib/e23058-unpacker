@@ -23,9 +23,9 @@ include_directories(${PROJECT_SOURCE_DIR}/include
                     ${PROJECT_SOURCE_DIR}/detector-specific/include)
 
 # ---- data classes written to the tree (+ ROOT dictionary) -------------------
-# To add PIXIE: add PixieData.h / src/PixieData.cpp here and a line in include/LinkDef.h
-set(DATA_HEADERS FROGData.h HiRAData.h TDCData.h)
-set(DATA_SOURCES src/FROGData.cpp src/HiRAData.cpp src/TDCData.cpp)
+# Adding a data class: add its header/source here and a line in include/LinkDef.h
+set(DATA_HEADERS FROGData.h HiRAData.h TDCData.h PixieData.h)
+set(DATA_SOURCES src/FROGData.cpp src/HiRAData.cpp src/TDCData.cpp src/PixieData.cpp)
 
 add_library(E23058Data SHARED ${DATA_SOURCES})
 target_link_libraries(E23058Data ${ROOT_LIBRARIES})
@@ -38,7 +38,8 @@ ROOT_GENERATE_DICTIONARY(G__E23058Data ${DATA_HEADERS}
 file(GLOB CORE_SOURCES     ${PROJECT_SOURCE_DIR}/src/*.cpp)
 list(REMOVE_ITEM CORE_SOURCES ${PROJECT_SOURCE_DIR}/src/FROGData.cpp
                               ${PROJECT_SOURCE_DIR}/src/HiRAData.cpp
-                              ${PROJECT_SOURCE_DIR}/src/TDCData.cpp)
+                              ${PROJECT_SOURCE_DIR}/src/TDCData.cpp
+                              ${PROJECT_SOURCE_DIR}/src/PixieData.cpp)
 file(GLOB MODULE_SOURCES   ${PROJECT_SOURCE_DIR}/modules/src/*.cpp)
 file(GLOB DETECTOR_SOURCES ${PROJECT_SOURCE_DIR}/detector-specific/src/*.cpp)
 

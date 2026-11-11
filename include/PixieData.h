@@ -1,0 +1,58 @@
+#ifndef PIXIEDATA_H
+#define PIXIEDATA_H
+
+// C/C++ includes
+#include <vector>
+
+// ROOT includes
+#include "Rtypes.h"
+
+/**
+ * !\brief Pixie-16 (DDAS) hit data for one wall. Three instances are written
+ *         to the E23058 tree:
+ *             "NWB."   LANA neutron wall B (facing the target)
+ *             "NWA."   LANA neutron wall A (behind NWB)
+ *             "VETO."  WMU VETO wall
+ *
+ * One entry per DDAS hit in every per-hit vector (length fMult), in the
+ * order the hits arrived. Raw values only, plus bar/side from the channel
+ * map (input/PIXIE/Pixie_ChannelMapping.txt). No calibration.
+ * Filled by: Pixie (reader -> one PixieData with every hit, not written) ->
+ *            PixieMapping::Split (each mapped hit copied to its wall).
+ */
+class PixieData{
+	public:
+		PixieData();
+		virtual ~PixieData();
+
+		void Clear();
+		void AppendHit(const PixieData &src, int i);	// copy hit i of src
+
+		// ---- raw, per hit
+		Int_t                   fMult;		// number of hits
+		std::vector<Int_t>      fCrate;
+		std::vector<Int_t>      fSlot;
+		std::vector<Int_t>      fChannel;	// 0-15
+		std::vector<Int_t>      fEnergy;	// on-board trapezoidal filter (ADC units)
+		std::vector<Double_t>   fTime;		// ns, coarse timestamp + CFD correction
+		std::vector<ULong64_t>  fCoarseTime;	// ns, timestamp only
+		std::vector<Int_t>      fCFD;		// raw CFD fraction
+		std::vector<Int_t>      fCFDTrigSource;	// 500 MSPS: bits 31:29 of header word 2
+		std::vector<Int_t>      fCFDFail;	// 1 = CFD failed (500 MSPS: trig source 7)
+		std::vector<Int_t>      fFinishCode;	// 1 = pileup flagged by the module
+		std::vector<Int_t>      fOverflow;	// 1 = ADC out of range
+		std::vector<Int_t>      fTraceLength;	// samples (trace itself only if WRITE_TRACES 1)
+		std::vector<ULong64_t>  fExtTimestamp;	// 0 if not enabled
+		std::vector<std::vector<UInt_t>>   fEnergySums;	// 4 per hit, empty if not enabled
+		std::vector<std::vector<UInt_t>>   fQDCSums;	// 8 per hit, empty if not enabled
+		std::vector<std::vector<UShort_t>> fTrace;	// empty unless WRITE_TRACES 1
+
+		// ---- mapped, per hit (PixieMapping)
+		std::vector<Int_t>      fModule;	// slot - FIRST_SLOT (the map's "Module")
+		std::vector<Int_t>      fBar;		// bar number
+		std::vector<Int_t>      fSide;		// NWA/NWB: 0 = L, 1 = R;  VETO: 0 = T, 1 = B
+
+		ClassDef(PixieData, 1);
+};
+
+#endif // PIXIEDATA_H
