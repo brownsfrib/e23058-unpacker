@@ -3,8 +3,8 @@
 
 [readout]
 SOURCE_ID             6			% event-builder source ID(s) of the DDAS crate (repeat the key for more)
-WRITE_TRACES          1			% 1 = store fTrace in LANA. and VETO. (large)
-KEEP_PIXIE_ONLY       1			% 1 = write events where only LANA/VETO fired (no FROG pass, no HiRA)
+WRITE_TRACES          1			% 1 = store fTrace in NWB. NWA. VETO. (large)
+KEEP_PIXIE_ONLY       1			% 1 = write events where only NWB/NWA/VETO fired (no FROG pass, no HiRA)
 
 [geometry]
 CHANNEL_MAP           input/PIXIE/Pixie_ChannelMapping.txt	% Module Channel Wall(B/A/V) Bar Side(L/R, T/B) Index

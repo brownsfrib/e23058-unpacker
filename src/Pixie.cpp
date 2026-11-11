@@ -71,7 +71,6 @@ bool Pixie::UnpackPayload(const uint8_t *payload, size_t nbytes){
 
 	// mapping is filled later; keep the vectors the same length
 	d.fModule.resize(d.fMult, -1);
-	d.fDetector.resize(d.fMult, PixieData::kUnmapped);
 	d.fBar.resize(d.fMult, -1);
 	d.fSide.resize(d.fMult, -1);
 

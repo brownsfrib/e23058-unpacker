@@ -12,7 +12,7 @@
 
 /**
  * !\brief Pixie channel map: (module, channel) -> wall, bar, side, and the
- *         split of each event's hits into the LANA. and VETO. branches.
+ *         split of each event's hits into the NWB., NWA. and VETO. branches.
  *
  * PixieConfig.dat [geometry]:
  *     CHANNEL_MAP  <path>     input/PIXIE/Pixie_ChannelMapping.txt
@@ -25,25 +25,26 @@
  *       (LANA, behind B), V = WMU VETO wall.
  * Side: L / T -> 0,  R / B -> 1   (LANA left/right, VETO top/bottom).
  * Index is a label only. One crate: the crate number is not used.
- * Hits on channels not in the file go to neither branch (counted in PrintSummary).
+ * Hits on channels not in the file go to no branch (counted in PrintSummary).
  */
 class PixieMapping{
 	public:
 		bool Load(const Config &cfg);
 		bool Load(const std::string &path);
 
-		// fill the mapped fields of 'all' (every decoded hit), then copy each
-		// mapped hit to lana (walls A, B) or veto; both are cleared first
-		void Split(PixieData &all, PixieData &lana, PixieData &veto);
+		// set fModule/fBar/fSide of 'all' (every decoded hit), then copy each
+		// mapped hit to its wall; nwb, nwa and veto are cleared first
+		void Split(PixieData &all, PixieData &nwb, PixieData &nwa, PixieData &veto);
 		void PrintSummary() const;
 
 		int firstSlot = 2;
 
 	private:
+		enum Wall { kUnmapped = 0, kNWB = 1, kNWA = 2, kVETO = 3 };
 		struct Entry {
-			int detector = PixieData::kUnmapped;
-			int bar      = -1;
-			int side     = -1;
+			int wall = kUnmapped;
+			int bar  = -1;
+			int side = -1;
 		};
 		static const int kModules  = 16;
 		static const int kChannels = 64;	// 16 for Rev F, 32 for Rev H

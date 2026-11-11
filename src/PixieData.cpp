@@ -15,8 +15,7 @@ void PixieData::Clear(){
 	fExtTimestamp.clear();
 	fEnergySums.clear();  fQDCSums.clear();       fTrace.clear();
 
-	fModule.clear();      fDetector.clear();      fBar.clear();      fSide.clear();
-	fNNWB = fNNWA = 0;
+	fModule.clear();      fBar.clear();           fSide.clear();
 }
 
 void PixieData::AppendHit(const PixieData &s, int i){
@@ -29,9 +28,7 @@ void PixieData::AppendHit(const PixieData &s, int i){
 	fExtTimestamp.push_back(s.fExtTimestamp[i]);
 	fEnergySums.push_back(s.fEnergySums[i]);   fQDCSums.push_back(s.fQDCSums[i]);
 	fTrace.push_back(s.fTrace[i]);
-	fModule.push_back(s.fModule[i]);           fDetector.push_back(s.fDetector[i]);
-	fBar.push_back(s.fBar[i]);                 fSide.push_back(s.fSide[i]);
+	fModule.push_back(s.fModule[i]);           fBar.push_back(s.fBar[i]);
+	fSide.push_back(s.fSide[i]);
 	fMult = (Int_t)fCrate.size();
-	fNNWB += (s.fDetector[i] == kNWB);
-	fNNWA += (s.fDetector[i] == kNWA);
 }

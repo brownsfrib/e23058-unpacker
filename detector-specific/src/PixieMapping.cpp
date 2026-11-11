@@ -48,47 +48,50 @@ bool PixieMapping::Load(const std::string &path){
 		Entry e;
 		char w = (char)std::toupper((unsigned char)wall[0]);
 		char s = (char)std::toupper((unsigned char)side[0]);
-		e.detector = (w == 'B') ? PixieData::kNWB
-		           : (w == 'A') ? PixieData::kNWA
-		           : (w == 'V') ? PixieData::kVETO : PixieData::kUnmapped;
+		e.wall = (w == 'B') ? kNWB
+		       : (w == 'A') ? kNWA
+		       : (w == 'V') ? kVETO : kUnmapped;
 		e.side = (s == 'L' || s == 'T') ? 0
 		       : (s == 'R' || s == 'B') ? 1 : -1;
 		e.bar  = bar;
-		if (e.detector == PixieData::kUnmapped || e.side < 0){
+		if (e.wall == kUnmapped || e.side < 0){
 			std::cerr << "\033[1;33mPixieMapping: unknown wall/side in '" << line << "'\033[0m\n";
 			continue;
 		}
-		if (fTable[idx].detector != PixieData::kUnmapped){
+		if (fTable[idx].wall != kUnmapped){
 			std::cerr << "\033[1;33mPixieMapping: module " << module << " channel " << channel
 			          << " listed twice (last one wins)\033[0m\n";
-			count[fTable[idx].detector]--;
+			count[fTable[idx].wall]--;
 			fN--;
 		}
 		fTable[idx] = e;
-		count[e.detector]++;
+		count[e.wall]++;
 		fN++;
 	}
-	std::cout << "PixieMapping: " << fN << " channels (NWB " << count[PixieData::kNWB]
-	          << ", NWA " << count[PixieData::kNWA] << ", VETO " << count[PixieData::kVETO]
+	std::cout << "PixieMapping: " << fN << " channels (NWB " << count[kNWB]
+	          << ", NWA " << count[kNWA] << ", VETO " << count[kVETO]
 	          << ") from " << path << ", module 0 = slot " << firstSlot << "\n";
 	return fN > 0;
 }
 
-void PixieMapping::Split(PixieData &d, PixieData &lana, PixieData &veto){
-	lana.Clear();
+void PixieMapping::Split(PixieData &d, PixieData &nwb, PixieData &nwa, PixieData &veto){
+	nwb.Clear();
+	nwa.Clear();
 	veto.Clear();
 	for (int i = 0; i < d.fMult; i++){
 		int module = d.fSlot[i] - firstSlot;
 		int idx = Index(module, d.fChannel[i]);
 		const Entry e = (idx < 0) ? Entry() : fTable[idx];
-		d.fModule[i]   = module;
-		d.fDetector[i] = e.detector;
-		d.fBar[i]      = e.bar;
-		d.fSide[i]     = e.side;
-		if (e.detector == PixieData::kNWB || e.detector == PixieData::kNWA){
-			lana.AppendHit(d, i);
+		d.fModule[i] = module;
+		d.fBar[i]    = e.bar;
+		d.fSide[i]   = e.side;
+		if (e.wall == kNWB){
+			nwb.AppendHit(d, i);
 		}
-		else if (e.detector == PixieData::kVETO){
+		else if (e.wall == kNWA){
+			nwa.AppendHit(d, i);
+		}
+		else if (e.wall == kVETO){
 			veto.AppendHit(d, i);
 		}
 		else {

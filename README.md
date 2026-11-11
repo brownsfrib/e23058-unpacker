@@ -1,6 +1,6 @@
 # e23058 unpacker
 
-Glommed NSCLDAQ `.evt` → `output/run_<RUN>.root`, tree **E23058**, branches `FROG.`, `HIRA.`, `TDC.`, `LANA.`, `VETO.` (+ `eventNumber`, `timestamp`).
+Glommed NSCLDAQ `.evt` → `output/run_<RUN>.root`, tree **E23058**, branches `FROG.`, `HIRA.`, `TDC.`, `NWB.`, `NWA.`, `VETO.` (+ `eventNumber`, `timestamp`).
 Every member is listed in [docs/TREE_GUIDE.md](docs/TREE_GUIDE.md).
 
 ## Build / run
@@ -29,8 +29,8 @@ Unpacker → reader (FROG sid 3, Pixie sid 6, HiRA sid 7) → FROGData / HiRADat
 FROG : FROGGeometry (angles) → FROGPhysics (zero suppression, fPass)
 HiRA : HiRAGeometry (strips/CsI → telescopes) → HiRACalibration (MeV) → HiRAPhysics (particles)
 TDC  : TDCMapping (aux V1190 channels)
-Pixie: DDAS hits (raw) → PixieMapping::Split (module/channel → wall, bar, side) → LANA. (walls A+B) / VETO.  No calibration.
-→ TreeWriter.Fill()   (event kept if FROG.fNPass > 0, HiRA fired, or LANA./VETO. have hits and KEEP_PIXIE_ONLY 1)
+Pixie: DDAS hits (raw) → PixieMapping::Split (module/channel → wall, bar, side) → NWB. / NWA. / VETO.  No calibration.
+→ TreeWriter.Fill()   (event kept if FROG.fNPass > 0, HiRA fired, or NWB./NWA./VETO. have hits and KEEP_PIXIE_ONLY 1)
 ```
 Settings: `input/FROG/FROGConfig.dat`, `input/HIRA/HiRAConfig.dat` (`[geometry] [calibration] [physics]`),
 `input/PIXIE/PixieConfig.dat` (`[readout]` source ID / traces / event keeping, `[geometry]` channel map).
@@ -39,4 +39,4 @@ Unknown keys are reported at start-up.
 ## PIXIE (LANA + VETO wall)
 Channel map: `input/PIXIE/Pixie_ChannelMapping.txt` (`Module Channel Wall Bar Side Index`; Wall B = LANA wall B facing
 the target, A = LANA wall A behind it, V = WMU VETO). Module = Pixie slot − `FIRST_SLOT` (PixieConfig.dat, default 2).
-Decoding follows FRIBDAQ/DDASFormat (`DDASHitUnpacker`). `LANA.` and `VETO.` are both `PixieData`. Hits on channels not in the map are not written; they are listed at the end of the run.
+Decoding follows FRIBDAQ/DDASFormat (`DDASHitUnpacker`). `NWB.`, `NWA.` and `VETO.` are all `PixieData`, one per wall. Hits on channels not in the map are not written; they are listed at the end of the run.
