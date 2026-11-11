@@ -78,3 +78,34 @@ Raw first leading-edge time (V1190 LSB); -10000 = no hit.
 | fChannels | map<string, Double_t> — only the channels that fired: `for (auto &c : tdc->fChannels)` |
 
 CsI times are in `HIRA.fCsITime`, not here.
+
+## LANA. and VETO. (PixieData) — Pixie-16 / DDAS hits, raw + channel map (no calibration)
+Two branches with the same class: `LANA.` = neutron walls B (facing the target) and A (behind B), `VETO.` = WMU VETO wall.
+One entry per DDAS hit, in arrival order. Map: `input/PIXIE/Pixie_ChannelMapping.txt`; hits on unmapped channels are not written.
+| member | type | length | units / meaning |
+|---|---|---|---|
+| fMult | Int_t | – | hits |
+| fCrate, fSlot, fChannel | vector<Int_t> | fMult | electronics address |
+| fEnergy | vector<Int_t> | fMult | on-board trapezoidal filter, ADC units |
+| fTime | vector<Double_t> | fMult | ns, timestamp + CFD correction (DDASFormat convention) |
+| fCoarseTime | vector<ULong64_t> | fMult | ns, timestamp only (500 MSPS: clock × 10) |
+| fCFD | vector<Int_t> | fMult | raw CFD fraction (13 bits at 500 MSPS) |
+| fCFDTrigSource | vector<Int_t> | fMult | 500 MSPS: which of the 5 sub-samples fired |
+| fCFDFail | vector<Int_t> | fMult | 1 = CFD failed (trig source 7) |
+| fFinishCode | vector<Int_t> | fMult | 1 = pileup |
+| fOverflow | vector<Int_t> | fMult | 1 = ADC out of range |
+| fTraceLength | vector<Int_t> | fMult | samples |
+| fExtTimestamp | vector<ULong64_t> | fMult | external clock, 0 if not enabled |
+| fEnergySums | vector<vector<UInt_t>> | fMult | 4 per hit, empty if not enabled |
+| fQDCSums | vector<vector<UInt_t>> | fMult | 8 per hit, empty if not enabled |
+| fTrace | vector<vector<UShort_t>> | fMult | empty unless WRITE_TRACES 1 |
+| fModule | vector<Int_t> | fMult | map "Module" = fSlot − FIRST_SLOT |
+| fDetector | vector<Int_t> | fMult | LANA.: 1 NWB (wall B, facing target), 2 NWA (wall A, behind B); VETO.: always 3 |
+| fBar | vector<Int_t> | fMult | bar |
+| fSide | vector<Int_t> | fMult | LANA.: 0 = L, 1 = R; VETO.: 0 = T, 1 = B |
+| fNNWB, fNNWA | Int_t | – | LANA. hits per wall (0 in VETO.) |
+
+```cpp
+t->Draw("LANA.fEnergy:LANA.fBar", "LANA.fDetector == 1 && LANA.fSide == 0");   // NWB left PMTs: energy vs bar
+t->Draw("VETO.fEnergy:VETO.fBar", "VETO.fSide == 0");                         // VETO top PMTs
+```
