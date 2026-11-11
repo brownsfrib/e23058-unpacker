@@ -18,7 +18,8 @@
       "back_slot": 1,
       "det_code": "3168-7",
       "thickness_um": 1521,
-      "chip_boards": "1,2"
+      "chip_boards": "1,2",
+      "fiducial_rotation": 0
     },
     {
       "id": 1,
@@ -31,7 +32,8 @@
       "back_slot": 3,
       "det_code": "2344-3",
       "thickness_um": 1491,
-      "chip_boards": "3,4"
+      "chip_boards": "3,4",
+      "fiducial_rotation": 90
     },
     {
       "id": 2,
@@ -44,7 +46,8 @@
       "back_slot": 5,
       "det_code": "2344-5",
       "thickness_um": 1491,
-      "chip_boards": "5,6"
+      "chip_boards": "5,6",
+      "fiducial_rotation": 90
     },
     {
       "id": 3,
@@ -57,7 +60,8 @@
       "back_slot": 7,
       "det_code": "2085-4",
       "thickness_um": 1499,
-      "chip_boards": "7,8"
+      "chip_boards": "7,8",
+      "fiducial_rotation": 90
     },
     {
       "id": 4,
@@ -70,7 +74,8 @@
       "back_slot": 9,
       "det_code": "2573-10",
       "thickness_um": null,
-      "chip_boards": "10,13"
+      "chip_boards": "10,13",
+      "fiducial_rotation": 0
     },
     {
       "id": 5,
@@ -83,7 +88,8 @@
       "back_slot": 1,
       "det_code": "2883-10",
       "thickness_um": 1536,
-      "chip_boards": "14,15"
+      "chip_boards": "14,15",
+      "fiducial_rotation": 0
     },
     {
       "id": 6,
@@ -96,7 +102,8 @@
       "back_slot": 3,
       "det_code": "2113-5",
       "thickness_um": 1460,
-      "chip_boards": "16,17"
+      "chip_boards": "16,17",
+      "fiducial_rotation": 0
     },
     {
       "id": 7,
@@ -109,7 +116,8 @@
       "back_slot": 5,
       "det_code": "2572-4",
       "thickness_um": 1471,
-      "chip_boards": "18,19"
+      "chip_boards": "18,19",
+      "fiducial_rotation": 90
     },
     {
       "id": 8,
@@ -122,7 +130,8 @@
       "back_slot": 7,
       "det_code": "2344-11",
       "thickness_um": 1503,
-      "chip_boards": "20,21"
+      "chip_boards": "20,21",
+      "fiducial_rotation": 0
     },
     {
       "id": 9,
@@ -135,7 +144,8 @@
       "back_slot": 9,
       "det_code": "2572-3",
       "thickness_um": 1500,
-      "chip_boards": "22,23"
+      "chip_boards": "22,23",
+      "fiducial_rotation": 0
     },
     {
       "id": 10,
@@ -148,7 +158,8 @@
       "back_slot": 11,
       "det_code": "2942-23",
       "thickness_um": 1537,
-      "chip_boards": "24,25"
+      "chip_boards": "24,25",
+      "fiducial_rotation": 0
     },
     {
       "id": 11,
@@ -161,7 +172,8 @@
       "back_slot": 13,
       "det_code": "2403-7",
       "thickness_um": 1541,
-      "chip_boards": "26,27"
+      "chip_boards": "26,27",
+      "fiducial_rotation": 0
     }
   ]
 }

@@ -43,10 +43,10 @@ ADC Index, Channel, Variable
 1, 9, csi_41
 1, 10,csi_42
 1, 11,csi_43
-1, 12,csi_44
-1, 13,csi_45
-1, 14,csi_46
-1, 15,csi_47
+1, 12,csi_47
+1, 13,csi_46
+1, 14,csi_45
+1, 15,csi_44
 1, 16,
 1, 17,
 1, 18,

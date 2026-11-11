@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 build_hira_geometry.py - HiRA theta/phi tables from the alignment survey.
 
@@ -82,6 +81,10 @@ PHI_0_TO_360 = True
 #                    With this survey that makes every frame mirror-imaged.
 TOP_RULE = "handedness"
 
+# Per-telescope "fiducial_rotation": degrees, clockwise as seen from behind (towards the target), by which the
+# frame found from the fiducials must be turned to give the telescope's true orientation
+# (0 if absent). Set from the mounting record: P1, P2, P3, P7 = 90.
+#
 # Per-telescope override: add  "fiducials": {"left": "P4", "right": "P2", "top": "P1",
 # "bottom": "P3"}  to a telescope in hira_config.json to bypass the automatic naming.
 
@@ -190,14 +193,22 @@ def identify(pts, target, frame):
     return {"left": left, "right": right, "top": top, "bottom": bottom}, frac
 
 
-def telescope_axes(p, target):
-    """Silicon centre, e_u (left->right), e_v (bottom->top), n (towards target)."""
+def telescope_axes(p, target, rotation_deg=0):
+    """Silicon centre, e_u (left->right), e_v (bottom->top), n (towards target).
+    rotation_deg: fiducial_rotation from hira_config.json. The frame axes found from the
+    fiducials are turned by this many degrees CLOCKWISE as seen from behind the telescope
+    (looking towards the target, the same viewpoint as the frame description), so that
+    telescopes whose fiducials sit turned on the frame get their true orientation."""
     centre = (p["left"] + p["right"]) / 2
     e_u = p["right"] - p["left"]; e_u /= np.linalg.norm(e_u)
     v = p["top"] - p["bottom"]; v -= np.dot(v, e_u) * e_u; e_v = v / np.linalg.norm(v)
     n = np.cross(e_u, e_v)
     if np.dot(n, target - centre) < 0:
         n = -n
+    if rotation_deg:
+        a = math.radians(rotation_deg)             # +angle about n: clockwise seen from BEHIND the telescope
+        e_u, e_v = (e_u * math.cos(a) + np.cross(n, e_u) * math.sin(a),
+                    e_v * math.cos(a) + np.cross(n, e_v) * math.sin(a))
     return centre, e_u, e_v, n
 
 
@@ -337,6 +348,7 @@ def build(args):
     print(" P  survey  left/right/top/bottom  top at  frame 'up' vs lab  dist(mm)  theta range")
     for t in tels:
         ids, p = named[t["id"]]
+        rot = t.get("fiducial_rotation", 0)
         _, frac = identify(raw[t["id"]], target, frame)
         top_frac = frac.get(ids["top"], float("nan"))
         # one set of Monte-Carlo geometry variations per telescope, shared by all groups
@@ -349,7 +361,7 @@ def build(args):
 
         r = {}
         for keys, U, V in groups.values():
-            c, e_u, e_v, n = telescope_axes(p, target)
+            c, e_u, e_v, n = telescope_axes(p, target, rot)
             si = c - n * FRAME_TO_SI_MM * 1e-3
             pts0 = si + U[..., None] * e_u + V[..., None] * e_v          # (E, S, 3)
             s = stats(*angles(pts0, target, frame))
@@ -360,7 +372,7 @@ def build(args):
             cth, cph = [], []
             Uc, Vc = U.mean(1)[:, None], V.mean(1)[:, None]
             for pj, tj, oj in trials:
-                c, e_u, e_v, n = telescope_axes(pj, tj)
+                c, e_u, e_v, n = telescope_axes(pj, tj, rot)
                 si = c - n * oj * 1e-3
                 a, b = angles(si + Uc * e_u + Vc * e_v, tj, frame)
                 cth.append(a); cph.append(b)
@@ -373,7 +385,7 @@ def build(args):
                 r.setdefault(name, {}).update(dict(zip(keys, vals)))
         results[t["id"]] = r
 
-        c, e_u, e_v, n = telescope_axes(p, target)
+        c, e_u, e_v, n = telescope_axes(p, target, rot)
         tilt = math.degrees(math.atan2(np.dot(e_v, frame[0]), np.dot(e_v, frame[1])))
         mount = ("upright" if abs(tilt) < 30 else "upside down" if abs(tilt) > 150
                  else f"rotated {tilt:+.0f} deg")
@@ -458,13 +470,12 @@ def write_outputs(cfg, results):
         w.writerow(["csi", "telescope", "quadrant", "adc_module", "adc_channel", "tdc_channel"] + ang_hdr + sys_hdr)
         for t in cfg["telescopes"]:
             r = results[t["id"]]
-            for q in range(4):				# q = CsI index (lab order)
-                d = lab[t["id"]].index(q)		# detector quadrant holding it
-                cid = 4 * t["id"] + q			# label written out (lab index)
-                hw  = 4 * t["id"] + d			# ADC/TDC lookup (detector frame, as cabled)
-                am, ac = adc.get(hw, (-1, -1))
-                w.writerow([cid, t["id"], q, am, ac, tdc.get(hw, (0, -1))[1]] + angle_cols(r, ("CSI", d))
-		+ sys_cols(r, ("CSI", d)))
+            for q in range(4):              # q = CsI index (lab order)
+                d = lab[t["id"]].index(q)       # detector quadrant holding it
+                cid = 4 * t["id"] + q           # label written out (lab index)
+                am, ac = adc.get(cid, (-1, -1))      # ADCMapping csi_N is the truth: N = 4*P + index
+                w.writerow([cid, t["id"], q, am, ac, tdc.get(cid, (0, -1))[1]] + angle_cols(r, ("CSI", d))
+                           + sys_cols(r, ("CSI", d)))
     print(f"\nwrote HiRA_strips.csv, HiRA_pixels.csv, HiRA_csi.csv, HiRA_channel_theta_phi.txt to {OUT_DIR}/")
     missing = [c for c in range(48) if c not in adc]
     if missing:

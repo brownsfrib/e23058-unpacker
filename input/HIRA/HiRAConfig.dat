@@ -50,5 +50,5 @@ DISABLE_ALL    	 TELE4
 DISABLE_ALL    	 TELE5
 
 NEIGHBOUR_DISTANCE 			1.41422 % minimum distance for matching front/back pixels
-IGNORE_NOT_MATCHING_CSI			1	% 1=track is dropped if no hit above CSI_E_RAW_THRESHOLD 
+IGNORE_NOT_MATCHING_CSI			0	% 1=track is dropped if no hit above CSI_E_RAW_THRESHOLD 
 
