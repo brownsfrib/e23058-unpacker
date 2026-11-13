@@ -8,17 +8,18 @@
 #include "Rtypes.h"
 
 /**
- * !\brief Pixie-16 (DDAS) hit data for one wall. Three instances are written
+ * !\brief Pixie-16 (DDAS) hit data for one wall or trigger. Four instances are written
  *         to the E23058 tree:
  *             "NWB."   LANA neutron wall B (facing the target)
  *             "NWA."   LANA neutron wall A (behind NWB)
  *             "VETO."  WMU VETO wall
+ *             "PIXIETRIG." channel 15 of every module (bar/side = -1)
  *
  * One entry per DDAS hit in every per-hit vector (length fMult), in the
  * order the hits arrived. Raw values only, plus bar/side from the channel
  * map (input/PIXIE/Pixie_ChannelMapping.txt). No calibration.
  * Filled by: Pixie (reader -> one PixieData with every hit, not written) ->
- *            PixieMapping::Split (each mapped hit copied to its wall).
+ *            PixieMapping::Split (each hit copied to its wall or trigger branch).
  */
 class PixieData{
 	public:

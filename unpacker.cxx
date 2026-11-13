@@ -1,5 +1,5 @@
 // E23058 unpacker: glommed NSCLDAQ .evt -> output/run_<RUN>.root, tree "E23058"
-// with branches FROG., HIRA., TDC., NWB., NWA., VETO. (one entry per kept event).
+// with branches FROG., HIRA., TDC., NWB., NWA., VETO., PIXIETRIG. (one entry per kept event).
 //
 //   export REGLOM=/path/to/reglom/  RUN=0100
 //   ./bin/unpacker            (run from the project directory)
@@ -85,8 +85,8 @@ int main(){
 	}
 
 	// ---- Pixie / DDAS: every decoded hit -> pixieAll (not written), split by
-	//      the channel map into one PixieData per wall: NWB, NWA (LANA), VETO
-	PixieData    pixieAll, nwbData, nwaData, vetoData;
+	//      the channel map into NWB, NWA (LANA), VETO; channel 15 -> PIXIETRIG
+	PixieData    pixieAll, nwbData, nwaData, vetoData, pixietrigData;
 	Pixie        pixie(&pixieAll, pixieCfg.GetInt("readout", "WRITE_TRACES", 0) != 0);
 	PixieMapping pixieMap;
 	const bool   keepPixieOnly = pixieCfg.GetInt("readout", "KEEP_PIXIE_ONLY", 1) != 0;
@@ -125,6 +125,7 @@ int main(){
 	writer.Add("NWB.",  &nwbData);
 	writer.Add("NWA.",  &nwaData);
 	writer.Add("VETO.", &vetoData);
+	writer.Add("PIXIETRIG.", &pixietrigData);
 
 	// ---- event loop
 	while (unpacker.NextEvent()){
@@ -143,9 +144,9 @@ int main(){
 		hiraPhys.Apply(hiraData);
 		tdcMap.Fill(hira.tdc, tdcData);
 
-		pixieMap.Split(pixieAll, nwbData, nwaData, vetoData);
+		pixieMap.Split(pixieAll, nwbData, nwaData, vetoData, pixietrigData);
 
-		const bool pixieHits = (nwbData.fMult > 0 || nwaData.fMult > 0 || vetoData.fMult > 0);
+		const bool pixieHits = (nwbData.fMult > 0 || nwaData.fMult > 0 || vetoData.fMult > 0 || pixietrigData.fMult > 0);
 		if (frogData.fNPass == 0 && !hira.fired && !(keepPixieOnly && pixieHits)){
 			continue;			// nothing worth writing
 		}
@@ -160,7 +161,7 @@ int main(){
 
 	Long64_t n = writer.Entries();
 	writer.Close();
-	std::cout << "\033[1;35mWrote " << n << " events (tree E23058: FROG. HIRA. TDC. NWB. NWA. VETO.) to output/run_"
+	std::cout << "\033[1;35mWrote " << n << " events (tree E23058: FROG. HIRA. TDC. NWB. NWA. VETO. PIXIETRIG.) to output/run_"
 	          << run << ".root\033[0m\n";
 	return 0;
 }

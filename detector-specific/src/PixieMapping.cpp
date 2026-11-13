@@ -74,15 +74,22 @@ bool PixieMapping::Load(const std::string &path){
 	return fN > 0;
 }
 
-void PixieMapping::Split(PixieData &d, PixieData &nwb, PixieData &nwa, PixieData &veto){
+void PixieMapping::Split(PixieData &d, PixieData &nwb, PixieData &nwa, PixieData &veto, PixieData &pixietrig){
 	nwb.Clear();
 	nwa.Clear();
 	veto.Clear();
+	pixietrig.Clear();
 	for (int i = 0; i < d.fMult; i++){
 		int module = d.fSlot[i] - firstSlot;
+		d.fModule[i] = module;
+		if (d.fChannel[i] == 15){
+			d.fBar[i] = -1;
+			d.fSide[i] = -1;
+			pixietrig.AppendHit(d, i);
+			continue;
+		}
 		int idx = Index(module, d.fChannel[i]);
 		const Entry e = (idx < 0) ? Entry() : fTable[idx];
-		d.fModule[i] = module;
 		d.fBar[i]    = e.bar;
 		d.fSide[i]   = e.side;
 		if (e.wall == kNWB){

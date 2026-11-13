@@ -12,7 +12,7 @@
 
 /**
  * !\brief Pixie channel map: (module, channel) -> wall, bar, side, and the
- *         split of each event's hits into the NWB., NWA. and VETO. branches.
+ *         split of each event's hits into the NWB., NWA., VETO. and PIXIETRIG. branches.
  *
  * PixieConfig.dat [geometry]:
  *     CHANNEL_MAP  <path>     input/PIXIE/Pixie_ChannelMapping.txt
@@ -25,7 +25,8 @@
  *       (LANA, behind B), V = WMU VETO wall.
  * Side: L / T -> 0,  R / B -> 1   (LANA left/right, VETO top/bottom).
  * Index is a label only. One crate: the crate number is not used.
- * Hits on channels not in the file go to no branch (counted in PrintSummary).
+ * Channel 15 of every module goes to PIXIETRIG. with bar/side = -1.
+ * Other hits on channels not in the file go to no branch (counted in PrintSummary).
  */
 class PixieMapping{
 	public:
@@ -33,8 +34,8 @@ class PixieMapping{
 		bool Load(const std::string &path);
 
 		// set fModule/fBar/fSide of 'all' (every decoded hit), then copy each
-		// mapped hit to its wall; nwb, nwa and veto are cleared first
-		void Split(PixieData &all, PixieData &nwb, PixieData &nwa, PixieData &veto);
+		// hit to its wall or PIXIETRIG.; all output containers are cleared first
+		void Split(PixieData &all, PixieData &nwb, PixieData &nwa, PixieData &veto, PixieData &pixietrig);
 		void PrintSummary() const;
 
 		int firstSlot = 2;
