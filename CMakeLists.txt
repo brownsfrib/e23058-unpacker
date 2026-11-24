@@ -46,6 +46,10 @@ file(GLOB DETECTOR_SOURCES ${PROJECT_SOURCE_DIR}/detector-specific/src/*.cpp)
 add_executable(unpacker unpacker.cxx ${CORE_SOURCES} ${MODULE_SOURCES} ${DETECTOR_SOURCES})
 target_link_libraries(unpacker E23058Data ${ROOT_LIBRARIES})
 
+# Plotting raw ADC values to test CsI mappings
+add_executable(plotADCraw plotADCraw.cxx ${CORE_SOURCES} ${MODULE_SOURCES} ${DETECTOR_SOURCES})
+target_link_libraries(plotADCraw E23058Data ${ROOT_LIBRARIES})
+
 # ---- geometry tools ------------------------------------------------------------
 add_executable(toBinary_FROG tools/toBinary_FROG.cpp)
 add_executable(toBinary_HIRA tools/toBinary_HIRA.cpp)

@@ -131,3 +131,5 @@ Module	Channel	Wall	Bar	Side	Index
 9	13	V	23	B	VB23
 9	0	V	24	T	VT24
 9	1	V	24	B	VB24
+9	4	V	25	T	VT25
+9	5	V	25	B	VB25
